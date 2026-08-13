@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.log
+.firebase/*.cache
+.env
+.env.local
+.wrangler
+dev.vars
+*.tsbuildinfo
