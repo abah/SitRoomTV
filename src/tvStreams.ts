@@ -1,10 +1,12 @@
-/** Sumber live YouTube untuk wall Monitoring TV Sitroom (6 slot). */
+/** Sumber live YouTube untuk wall Monitoring TV Sitroom (8 slot). */
 export type TvCategoryId =
   | "tvone"
   | "kompas"
   | "tvri"
   | "metro"
   | "cnn"
+  | "inews"
+  | "cnbc"
   | "internasional";
 
 export interface TvStreamOption {
@@ -187,7 +189,7 @@ function optionsWithDefaults(...preferredIds: string[]): TvStreamOption[] {
 }
 
 /**
- * 6 slot wall — tiap menu berisi banyak opsi cadangan
+ * 8 slot wall — tiap menu berisi banyak opsi cadangan
  * supaya selalu ada yang bisa diputar.
  */
 export const TV_CATEGORIES: TvCategory[] = [
@@ -268,6 +270,36 @@ export const TV_CATEGORIES: TvCategory[] = [
       "kompas-24jam",
       "tvone-24jam",
       "metro-24jam",
+    ),
+  },
+  {
+    id: "inews",
+    title: "iNews",
+    hint: "Nasional + regional · ganti jika mati",
+    options: optionsWithDefaults(
+      "inews-24jam",
+      "inews-sumut",
+      "inews-jatim",
+      "sindo-24jam",
+      "cnnid-24jam",
+      "metro-24jam",
+      "tvone-24jam",
+      "kompas-24jam",
+    ),
+  },
+  {
+    id: "cnbc",
+    title: "CNBC Indonesia",
+    hint: "Bisnis + cadangan berita nasional",
+    options: optionsWithDefaults(
+      "cnbc-channel",
+      "cnnid-24jam",
+      "cnnid-channel",
+      "metro-24jam",
+      "kompas-24jam",
+      "tvone-24jam",
+      "inews-24jam",
+      "sindo-24jam",
     ),
   },
   {

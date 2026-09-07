@@ -36,7 +36,7 @@ function isFsActive(el: Element | null): boolean {
 
 export default function TvLiveWall({
   title = "Kanal TV Live",
-  subtitle = "6 kanal live · mute · fullscreen wall untuk monitoring",
+  subtitle = "8 kanal live · mute · fullscreen wall untuk monitoring",
   headerActions,
   className = "",
 }: {
@@ -294,14 +294,14 @@ export default function TvLiveWall({
               type="button"
               className="btn small primary"
               onClick={openWall}
-              title="Fullscreen 6 TV"
+              title="Fullscreen 8 TV"
             >
-              <Maximize2 size={13} /> Fullscreen 6 TV
+              <Maximize2 size={13} /> Fullscreen 8 TV
             </button>
           </div>
         </div>
 
-        <div className="sr-tv-grid sr-tv-grid-6">
+        <div className="sr-tv-grid sr-tv-grid-8">
           {TV_CATEGORIES.map((cat) => renderPlayer(cat.id, "grid"))}
         </div>
       </div>
@@ -311,7 +311,7 @@ export default function TvLiveWall({
           <div className="sr-tv-wall" ref={wallFsRef}>
             <header className="sr-tv-wall-bar">
               <div>
-                <b>Monitoring TV — 6 kanal</b>
+                <b>Monitoring TV — 8 kanal</b>
                 <small>
                   {wallFs
                     ? "Mode layar penuh browser · Esc untuk keluar"
@@ -386,7 +386,7 @@ export default function TvLiveWall({
                     openWall();
                   }}
                 >
-                  <Maximize2 size={14} /> Wall 6 TV
+                  <Maximize2 size={14} /> Wall 8 TV
                 </button>
                 <a
                   className="btn small"
