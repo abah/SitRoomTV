@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   Expand,
   ExternalLink,
   Maximize2,
@@ -11,7 +13,6 @@ import {
 } from "lucide-react";
 import {
   TV_CATEGORIES,
-  allPlayingState,
   embedUrl,
   emptyPlayingState,
   nextOptionId,
@@ -36,16 +37,19 @@ function isFsActive(el: Element | null): boolean {
 
 export default function TvLiveWall({
   title = "Kanal TV Live",
-  subtitle = "8 kanal live · mute · fullscreen wall untuk monitoring",
+  subtitle,
+  pageSize = 8,
   headerActions,
   className = "",
 }: {
   title?: string;
   subtitle?: string;
+  pageSize?: 4 | 8;
   headerActions?: ReactNode;
   className?: string;
 }) {
   const wallFsRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Record<TvCategoryId, string>>(() =>
     Object.fromEntries(
       TV_CATEGORIES.map((c) => [c.id, c.options[0].id]),
@@ -56,6 +60,28 @@ export default function TvLiveWall({
   const [enlarged, setEnlarged] = useState<TvCategoryId | null>(null);
   const [wallOpen, setWallOpen] = useState(false);
   const [wallFs, setWallFs] = useState(false);
+
+  const pageCount = Math.max(1, Math.ceil(TV_CATEGORIES.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const visible = TV_CATEGORIES.slice(
+    safePage * pageSize,
+    safePage * pageSize + pageSize,
+  );
+  const visibleIds = visible.map((c) => c.id);
+  const countLabel = `${pageSize} TV`;
+  const resolvedSubtitle =
+    subtitle ??
+    (pageSize === 4
+      ? `4 stasiun per halaman · ${pageCount} halaman · mute · fullscreen`
+      : "8 kanal live · mute · fullscreen wall untuk monitoring");
+
+  const playVisible = (on = true) => {
+    setPlaying((p) => {
+      const next = { ...p };
+      for (const id of visibleIds) next[id] = on;
+      return next;
+    });
+  };
 
   const optionFor = (catId: TvCategoryId) => {
     const cat = TV_CATEGORIES.find((c) => c.id === catId)!;
@@ -72,6 +98,10 @@ export default function TvLiveWall({
     setPlaying((p) => ({ ...p, [catId]: true }));
   };
 
+  useEffect(() => {
+    setPage((n) => Math.min(n, Math.max(0, pageCount - 1)));
+  }, [pageCount]);
+
   const enlargedCat = useMemo(
     () => TV_CATEGORIES.find((c) => c.id === enlarged) ?? null,
     [enlarged],
@@ -79,7 +109,7 @@ export default function TvLiveWall({
   const enlargedOpt = enlarged ? optionFor(enlarged) : null;
 
   const openWall = () => {
-    setPlaying(allPlayingState(true));
+    playVisible(true);
     setEnlarged(null);
     setWallOpen(true);
   };
@@ -280,13 +310,36 @@ export default function TvLiveWall({
             <Tv size={16} /> {title}
           </h3>
           <div className="sr-tv-head-actions">
-            <small>{subtitle}</small>
+            <small>{resolvedSubtitle}</small>
             {headerActions}
+            {pageCount > 1 && (
+              <div className="sr-tv-pager">
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={safePage <= 0}
+                  onClick={() => setPage((n) => Math.max(0, n - 1))}
+                >
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <span>
+                  {safePage + 1}/{pageCount}
+                </span>
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={safePage >= pageCount - 1}
+                  onClick={() => setPage((n) => Math.min(pageCount - 1, n + 1))}
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
             <button
               type="button"
               className="btn small"
-              onClick={() => setPlaying(allPlayingState(true))}
-              title="Putar semua kanal"
+              onClick={() => playVisible(true)}
+              title="Putar kanal di halaman ini"
             >
               <Play size={13} /> Putar semua
             </button>
@@ -294,15 +347,15 @@ export default function TvLiveWall({
               type="button"
               className="btn small primary"
               onClick={openWall}
-              title="Fullscreen 8 TV"
+              title={`Fullscreen ${countLabel}`}
             >
-              <Maximize2 size={13} /> Fullscreen 8 TV
+              <Maximize2 size={13} /> Fullscreen {countLabel}
             </button>
           </div>
         </div>
 
-        <div className="sr-tv-grid sr-tv-grid-8">
-          {TV_CATEGORIES.map((cat) => renderPlayer(cat.id, "grid"))}
+        <div className={`sr-tv-grid sr-tv-grid-${pageSize}`}>
+          {visible.map((cat) => renderPlayer(cat.id, "grid"))}
         </div>
       </div>
 
@@ -311,7 +364,10 @@ export default function TvLiveWall({
           <div className="sr-tv-wall" ref={wallFsRef}>
             <header className="sr-tv-wall-bar">
               <div>
-                <b>Monitoring TV — 8 kanal</b>
+                <b>
+                  Monitoring TV — {visible.length} kanal
+                  {pageCount > 1 ? ` · halaman ${safePage + 1}/${pageCount}` : ""}
+                </b>
                 <small>
                   {wallFs
                     ? "Mode layar penuh browser · Esc untuk keluar"
@@ -336,8 +392,8 @@ export default function TvLiveWall({
                 </button>
               </div>
             </header>
-            <div className="sr-tv-wall-grid">
-              {TV_CATEGORIES.map((cat) => renderPlayer(cat.id, "wall"))}
+            <div className={`sr-tv-wall-grid sr-tv-wall-grid-${pageSize}`}>
+              {visible.map((cat) => renderPlayer(cat.id, "wall"))}
             </div>
           </div>
         </div>
@@ -386,7 +442,7 @@ export default function TvLiveWall({
                     openWall();
                   }}
                 >
-                  <Maximize2 size={14} /> Wall 8 TV
+                  <Maximize2 size={14} /> Wall {countLabel}
                 </button>
                 <a
                   className="btn small"
