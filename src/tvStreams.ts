@@ -1,11 +1,13 @@
-/** Sumber live YouTube untuk wall Monitoring TV Sitroom (6 slot). */
+/** Sumber live YouTube untuk wall Monitoring TV Sitroom (8 slot). */
 export type TvCategoryId =
   | "tvone"
   | "kompas"
   | "tvri"
   | "metro"
   | "cnn"
-  | "internasional";
+  | "garuda"
+  | "nusantara"
+  | "btv";
 
 export interface TvStreamOption {
   id: string;
@@ -14,6 +16,10 @@ export interface TvStreamOption {
   videoId?: string;
   /** Fallback: channel live_stream embed jika videoId kosong. */
   channelId?: string;
+  /** HLS resmi dari situs stasiun (m3u8). */
+  hlsUrl?: string;
+  /** Halaman resmi live. */
+  pageUrl?: string;
 }
 
 export interface TvCategory {
@@ -143,6 +149,110 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
     videoId: "z31jg2THbWM",
   },
 
+  /* —— Garuda TV / Nusantara TV / BTV —— */
+  {
+    id: "garuda-site",
+    label: "Garuda TV live (garuda.tv)",
+    hlsUrl:
+      "https://hgmtv.com:2020/hls/garudatvlivestreaming/garudatvlivestreaming.m3u8",
+    pageUrl: "https://garuda.tv/live/",
+    channelId: "UCmXp0n4Oq8DGzjRZj3EvG4Q",
+  },
+  {
+    id: "garuda-site-alt",
+    label: "Garuda TV live (cadangan HLS)",
+    hlsUrl:
+      "https://hgmtv.com:19360/garudatvlivestreaming/garudatvlivestreaming.m3u8",
+    pageUrl: "https://garuda.tv/live/",
+  },
+  {
+    id: "btv-site",
+    label: "BTV live (btv.id)",
+    hlsUrl:
+      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/master.m3u8",
+    pageUrl: "https://www.beritasatu.com/btv-live-streaming",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+  {
+    id: "garuda-live",
+    label: "Garuda TV live",
+    videoId: "6k9nOc6RuXY",
+    channelId: "UCmXp0n4Oq8DGzjRZj3EvG4Q",
+  },
+  {
+    id: "garuda-breaking",
+    label: "Garuda TV · Breaking News",
+    videoId: "cAhGxenukeo",
+  },
+  {
+    id: "garuda-halim",
+    label: "Garuda TV · Halim / Krakatau",
+    videoId: "yXyAjwi7dHo",
+  },
+  {
+    id: "garuda-channel",
+    label: "Garuda TV (channel live)",
+    channelId: "UCmXp0n4Oq8DGzjRZj3EvG4Q",
+  },
+  {
+    id: "nusantara-live",
+    label: "Nusantara TV live",
+    videoId: "OP9MloieXYw",
+    channelId: "UCAMpZJJNQPZ6q7ZYKJV1igQ",
+  },
+  {
+    id: "nusantara-krakatau",
+    label: "Nusantara · Erupsi Anak Krakatau",
+    videoId: "8ndkO6gEeaQ",
+  },
+  {
+    id: "nusantara-ratas",
+    label: "Nusantara · Ratas Bencana",
+    videoId: "FqZ3Z874T5I",
+  },
+  {
+    id: "nusantara-suara",
+    label: "Nusantara · Suara Nusantara",
+    videoId: "XSSw7jUJFpc",
+  },
+  {
+    id: "nusantara-channel",
+    label: "Nusantara TV (channel live)",
+    channelId: "UCAMpZJJNQPZ6q7ZYKJV1igQ",
+  },
+  {
+    id: "btv-live",
+    label: "BTV live · Arah Baru Informasi",
+    videoId: "bWS6nvXQUlM",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+  {
+    id: "btv-krakatau",
+    label: "BTV · Breaking Krakatau",
+    videoId: "Ocl-8-xlGZc",
+  },
+  {
+    id: "btv-dampak",
+    label: "BTV · Dampak Erupsi",
+    videoId: "1lrIncJ8szQ",
+  },
+  {
+    id: "btv-channel",
+    label: "BTV (channel live)",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+  {
+    id: "beritasatu-breaking",
+    label: "BeritaSatu · Breaking News",
+    videoId: "UYFL-2TPfWw",
+    channelId: "UCqLsfkQSM0yfyGvONAGWd3Q",
+  },
+  {
+    id: "beritasatu-channel",
+    label: "BeritaSatu (channel live)",
+    channelId: "UCqLsfkQSM0yfyGvONAGWd3Q",
+  },
+
   /* —— Internasional —— */
   {
     id: "aje",
@@ -187,8 +297,8 @@ function optionsWithDefaults(...preferredIds: string[]): TvStreamOption[] {
 }
 
 /**
- * 6 slot wall — tiap menu berisi banyak opsi cadangan
- * supaya selalu ada yang bisa diputar.
+ * 8 slot wall — Garuda / Nusantara / BTV mengganti slot extra.
+ * Tiap menu tetap punya banyak opsi cadangan.
  */
 export const TV_CATEGORIES: TvCategory[] = [
   {
@@ -240,8 +350,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "MetroTV",
     hint: "Banyak live Metro · coba opsi lain jika mati",
     options: optionsWithDefaults(
-      "metro-24jam",
       "metro-channel",
+      "metro-24jam",
       "metro-bn-raker",
       "metro-bn-rdp",
       "metro-lambe",
@@ -271,45 +381,84 @@ export const TV_CATEGORIES: TvCategory[] = [
     ),
   },
   {
-    id: "internasional",
-    title: "Internasional",
-    hint: "Al Jazeera · Sky · France 24 · DW · Euronews",
+    id: "garuda",
+    title: "Garuda TV",
+    hint: "Live + breaking · ganti jika mati",
     options: optionsWithDefaults(
-      "aje",
-      "sky",
-      "france24",
-      "dw",
-      "euronews",
+      "garuda-site",
+      "garuda-site-alt",
+      "garuda-channel",
+      "garuda-live",
+      "garuda-breaking",
+      "garuda-halim",
+      "nusantara-krakatau",
+      "btv-dampak",
+      "cnnid-24jam",
+      "metro-24jam",
+      "kompas-24jam",
+      "tvone-24jam",
+    ),
+  },
+  {
+    id: "nusantara",
+    title: "Nusantara TV",
+    hint: "Live + breaking · ganti jika mati",
+    options: optionsWithDefaults(
+      "nusantara-krakatau",
+      "nusantara-ratas",
+      "nusantara-suara",
+      "nusantara-live",
+      "nusantara-channel",
+      "garuda-breaking",
+      "btv-dampak",
+      "kompas-24jam",
       "cnnid-24jam",
       "metro-24jam",
     ),
   },
+  {
+    id: "btv",
+    title: "BTV",
+    hint: "BTV + BeritaSatu · ganti jika mati",
+    options: optionsWithDefaults(
+      "btv-site",
+      "btv-channel",
+      "btv-live",
+      "btv-dampak",
+      "btv-krakatau",
+      "beritasatu-breaking",
+      "beritasatu-channel",
+      "garuda-breaking",
+      "nusantara-krakatau",
+      "cnbc-channel",
+      "cnnid-24jam",
+    ),
+  },
 ];
 
-export function emptyPlayingState(): Record<TvCategoryId, boolean> {
-  return Object.fromEntries(
-    TV_CATEGORIES.map((c) => [c.id, false]),
-  ) as Record<TvCategoryId, boolean>;
+export function optionById(id: string): TvStreamOption {
+  return (
+    TV_STREAM_CATALOG.find((o) => o.id === id) ?? TV_STREAM_CATALOG[0]
+  );
 }
 
-export function allPlayingState(on = true): Record<TvCategoryId, boolean> {
-  return Object.fromEntries(
-    TV_CATEGORIES.map((c) => [c.id, on]),
-  ) as Record<TvCategoryId, boolean>;
+export function defaultSlotStreamIds(): string[] {
+  return TV_CATEGORIES.map((c) => c.options[0]?.id ?? TV_STREAM_CATALOG[0].id);
 }
 
-export function nextOptionId(
-  catId: TvCategoryId,
-  currentId: string,
-): string {
-  const cat = TV_CATEGORIES.find((c) => c.id === catId);
-  if (!cat?.options.length) return currentId;
-  const idx = cat.options.findIndex((o) => o.id === currentId);
-  const next = cat.options[(idx + 1) % cat.options.length];
-  return next?.id ?? cat.options[0].id;
+export function nextCatalogOptionId(currentId: string): string {
+  if (!TV_STREAM_CATALOG.length) return currentId;
+  const idx = TV_STREAM_CATALOG.findIndex((o) => o.id === currentId);
+  const next = TV_STREAM_CATALOG[(idx + 1) % TV_STREAM_CATALOG.length];
+  return next?.id ?? TV_STREAM_CATALOG[0].id;
+}
+
+export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
+  return Array.from({ length: count }, () => false);
 }
 
 export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
+  if (opt.hlsUrl) return opt.hlsUrl;
   const params = new URLSearchParams({
     autoplay: autoplay ? "1" : "0",
     mute: "1",
@@ -327,7 +476,18 @@ export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
 }
 
 export function watchUrl(opt: TvStreamOption): string {
+  if (opt.pageUrl) return opt.pageUrl;
   if (opt.videoId) return `https://www.youtube.com/watch?v=${opt.videoId}`;
   if (opt.channelId) return `https://www.youtube.com/channel/${opt.channelId}/live`;
+  if (opt.hlsUrl) return opt.hlsUrl;
   return "https://www.youtube.com";
+}
+
+export function isHlsOption(opt: TvStreamOption): boolean {
+  return Boolean(opt.hlsUrl);
+}
+
+export function openSourceLabel(opt: TvStreamOption): string {
+  if (opt.pageUrl || opt.hlsUrl) return "Buka situs resmi";
+  return "Buka di YouTube";
 }

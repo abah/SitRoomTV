@@ -35,7 +35,25 @@ function Clock() {
   );
 }
 
+function currentPageSize(): 4 | 8 {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  return path === "/4" ? 4 : 8;
+}
+
 function App() {
+  const [pageSize, setPageSize] = useState<4 | 8>(currentPageSize);
+
+  useEffect(() => {
+    const sync = () => setPageSize(currentPageSize());
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const go = (to: string, size: 4 | 8) => {
+    window.history.pushState({}, "", to);
+    setPageSize(size);
+  };
+
   return (
     <div className="situroom-app">
       <header className="sr-app-bar">
@@ -43,10 +61,34 @@ function App() {
           <span className="sr-live-dot" aria-hidden />
           <div>
             <h1>SitRoom TV</h1>
-            <p>Situation Room · Monitoring 6 kanal live</p>
+            <p>
+              Situation Room · Monitoring {pageSize} kanal live
+            </p>
           </div>
         </div>
         <div className="sr-app-meta">
+          <nav className="sr-layout-nav" aria-label="Tampilan wall">
+            <a
+              href="/"
+              className={pageSize === 8 ? "active" : ""}
+              onClick={(e) => {
+                e.preventDefault();
+                go("/", 8);
+              }}
+            >
+              8 TV
+            </a>
+            <a
+              href="/4"
+              className={pageSize === 4 ? "active" : ""}
+              onClick={(e) => {
+                e.preventDefault();
+                go("/4", 4);
+              }}
+            >
+              4 TV
+            </a>
+          </nav>
           <span className="sr-live-badge">
             <Radio size={13} /> LIVE
           </span>
@@ -56,8 +98,14 @@ function App() {
 
       <main className="sr-app-main">
         <TvLiveWall
+          key={pageSize}
+          pageSize={pageSize}
           title="Kanal TV Live"
-          subtitle="6 kanal · banyak link cadangan per stasiun · ↻ ganti jika mati"
+          subtitle={
+            pageSize === 4
+              ? "4 layar per halaman · pilih stasiun di tiap kotak"
+              : "8 layar · pilih stasiun bebas di tiap kotak"
+          }
         />
       </main>
     </div>
