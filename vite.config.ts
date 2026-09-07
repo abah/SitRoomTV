@@ -6,11 +6,42 @@ const ALLOWED_SUFFIXES = [
   "hgmtv.com",
   "tenbytecdn.com",
   "beritasatumedia.com",
+  "rctiplus.id",
 ];
+
+const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
+let inewsMasterUrl = "";
+let inewsMasterAt = 0;
 
 function isAllowedHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   return ALLOWED_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+async function resolveInewsMaster(): Promise<string> {
+  const now = Date.now();
+  if (inewsMasterUrl && now - inewsMasterAt < 10 * 60 * 1000) {
+    return inewsMasterUrl;
+  }
+  const html = await fetch(INEWS_EMBED, {
+    headers: {
+      "User-Agent": "SitRoomTV",
+      Referer: "https://tv.inews.id/streaming",
+    },
+  }).then((r) => r.text());
+  const match =
+    html.match(/STREAM_URL\]\s*=\s*atob\('([A-Za-z0-9+/=]+)'\)/) ??
+    html.match(/atob\('(aHR0cHM6Ly9pbmV3cy1saW5pZXJ[^']*)'\)/);
+  if (!match) throw new Error("inews token missing");
+  inewsMasterUrl = atob(match[1]);
+  inewsMasterAt = now;
+  return inewsMasterUrl;
+}
+
+function refererFor(hostname: string): string {
+  if (hostname.includes("hgmtv")) return "https://garuda.tv/live/";
+  if (hostname.includes("rctiplus")) return INEWS_EMBED;
+  return "https://www.beritasatu.com/btv-live-streaming";
 }
 
 function hlsDevProxy(): Plugin {
@@ -28,15 +59,19 @@ function hlsDevProxy(): Plugin {
               res.end("missing u");
               return;
             }
-            const target = new URL(raw);
+            let target = new URL(raw);
             if (!isAllowedHost(target.hostname)) {
               res.statusCode = 403;
               res.end("forbidden");
               return;
             }
-            const referer = target.hostname.includes("hgmtv")
-              ? "https://garuda.tv/live/"
-              : "https://www.beritasatu.com/btv-live-streaming";
+            if (
+              target.hostname === "inews-linier.rctiplus.id" &&
+              target.pathname.endsWith("/inews-sdi.m3u8")
+            ) {
+              target = new URL(await resolveInewsMaster());
+            }
+            const referer = refererFor(target.hostname);
             const upstream = await fetch(target.toString(), {
               redirect: "follow",
               headers: {

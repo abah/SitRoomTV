@@ -2,7 +2,39 @@ const ALLOWED_SUFFIXES = [
   "hgmtv.com",
   "tenbytecdn.com",
   "beritasatumedia.com",
+  "rctiplus.id",
 ];
+
+const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
+let inewsMasterUrl = "";
+let inewsMasterAt = 0;
+
+async function resolveInewsMaster(): Promise<string> {
+  const now = Date.now();
+  if (inewsMasterUrl && now - inewsMasterAt < 10 * 60 * 1000) {
+    return inewsMasterUrl;
+  }
+  const html = await fetch(INEWS_EMBED, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; SitRoomTV/1.0)",
+      Referer: "https://tv.inews.id/streaming",
+    },
+  }).then((r) => r.text());
+  const match =
+    html.match(/STREAM_URL\]\s*=\s*atob\('([A-Za-z0-9+/=]+)'\)/) ??
+    html.match(/atob\('(aHR0cHM6Ly9pbmV3cy1saW5pZXJ[^']*)'\)/);
+  if (!match) throw new Error("inews token missing");
+  inewsMasterUrl = atob(match[1]);
+  inewsMasterAt = now;
+  return inewsMasterUrl;
+}
+
+function isInewsMaster(target: URL): boolean {
+  return (
+    target.hostname === "inews-linier.rctiplus.id" &&
+    target.pathname.endsWith("/inews-sdi.m3u8")
+  );
+}
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +56,12 @@ function isAllowed(target: URL): boolean {
 function refererFor(target: URL): string {
   if (target.hostname === "hgmtv.com" || target.hostname.endsWith(".hgmtv.com")) {
     return "https://garuda.tv/live/";
+  }
+  if (
+    target.hostname.endsWith(".rctiplus.id") ||
+    target.hostname === "rctiplus.id"
+  ) {
+    return INEWS_EMBED;
   }
   return "https://www.beritasatu.com/btv-live-streaming";
 }
@@ -70,6 +108,14 @@ async function proxyHls(request: Request): Promise<Response> {
   }
   if (!isAllowed(target)) {
     return new Response("forbidden", { status: 403, headers: CORS });
+  }
+
+  if (isInewsMaster(target)) {
+    try {
+      target = new URL(await resolveInewsMaster());
+    } catch {
+      return new Response("inews token failed", { status: 502, headers: CORS });
+    }
   }
 
   const referer = refererFor(target);
