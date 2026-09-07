@@ -2,10 +2,16 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
-const ALLOWED_HOSTS = new Set([
+const ALLOWED_SUFFIXES = [
   "hgmtv.com",
-  "lnd0t3b922.tenbytecdn.com",
-]);
+  "tenbytecdn.com",
+  "beritasatumedia.com",
+];
+
+function isAllowedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return ALLOWED_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
 
 function hlsDevProxy(): Plugin {
   return {
@@ -23,22 +29,36 @@ function hlsDevProxy(): Plugin {
               return;
             }
             const target = new URL(raw);
-            if (!ALLOWED_HOSTS.has(target.hostname)) {
+            if (!isAllowedHost(target.hostname)) {
               res.statusCode = 403;
               res.end("forbidden");
               return;
             }
+            const referer = target.hostname.includes("hgmtv")
+              ? "https://garuda.tv/live/"
+              : "https://www.beritasatu.com/btv-live-streaming";
             const upstream = await fetch(target.toString(), {
+              redirect: "follow",
               headers: {
                 "User-Agent": req.headers["user-agent"] ?? "SitRoomTV",
-                Referer: target.hostname.includes("hgmtv")
-                  ? "https://garuda.tv/live/"
-                  : "https://www.beritasatu.com/btv-live-streaming",
+                Referer: referer,
+                Origin: new URL(referer).origin,
+                "Cache-Control": "no-cache",
+                Pragma: "no-cache",
               },
             });
+            let playlistBase = target;
+            try {
+              const finalUrl = new URL(upstream.url);
+              if (isAllowedHost(finalUrl.hostname)) playlistBase = finalUrl;
+            } catch {
+              /* keep original target */
+            }
             const ctype = upstream.headers.get("content-type") ?? "";
             const isPlaylist =
-              ctype.includes("mpegurl") || target.pathname.endsWith(".m3u8");
+              ctype.includes("mpegurl") ||
+              target.pathname.endsWith(".m3u8") ||
+              playlistBase.pathname.endsWith(".m3u8");
             res.setHeader("Access-Control-Allow-Origin", "*");
             res.setHeader("Cache-Control", "no-store");
             if (isPlaylist) {
@@ -50,11 +70,11 @@ function hlsDevProxy(): Plugin {
                   if (!trimmed) return line;
                   if (trimmed.startsWith("#")) {
                     return line.replace(/URI="([^"]+)"/g, (_m, uri: string) => {
-                      const abs = new URL(uri, target).toString();
+                      const abs = new URL(uri, playlistBase).toString();
                       return `URI="/hls?u=${encodeURIComponent(abs)}"`;
                     });
                   }
-                  const abs = new URL(trimmed, target).toString();
+                  const abs = new URL(trimmed, playlistBase).toString();
                   return `/hls?u=${encodeURIComponent(abs)}`;
                 })
                 .join("\n");

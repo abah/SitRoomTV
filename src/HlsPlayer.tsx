@@ -22,31 +22,53 @@ export default function HlsPlayer({
       });
     };
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = playSrc;
-      tryPlay();
-      return () => {
-        video.removeAttribute("src");
-        video.load();
-      };
-    }
-
     void import("hls.js").then(({ default: Hls }) => {
-      if (destroyed || !Hls.isSupported()) return;
-      const instance = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-      });
-      hls = instance;
-      instance.loadSource(playSrc);
-      instance.attachMedia(video);
-      instance.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+      if (destroyed) return;
+
+      if (Hls.isSupported()) {
+        const instance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 30,
+          maxBufferLength: 20,
+          liveSyncDurationCount: 3,
+          capLevelToPlayerSize: true,
+          manifestLoadingTimeOut: 15000,
+          fragLoadingTimeOut: 20000,
+        });
+        hls = instance;
+        instance.on(
+          Hls.Events.ERROR,
+          (_event: unknown, data: { fatal?: boolean; type?: string }) => {
+            if (!data?.fatal) return;
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              instance.startLoad();
+              return;
+            }
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              instance.recoverMediaError();
+              return;
+            }
+            instance.destroy();
+          },
+        );
+        instance.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+        instance.loadSource(playSrc);
+        instance.attachMedia(video);
+        return;
+      }
+
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = playSrc;
+        tryPlay();
+      }
     });
 
     return () => {
       destroyed = true;
       hls?.destroy();
+      video.removeAttribute("src");
+      video.load();
     };
   }, [src]);
 

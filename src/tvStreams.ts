@@ -169,7 +169,7 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
     id: "btv-site",
     label: "BTV live (btv.id)",
     hlsUrl:
-      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/master.m3u8",
+      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/720p/index.m3u8",
     pageUrl: "https://www.beritasatu.com/btv-live-streaming",
     channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
   },

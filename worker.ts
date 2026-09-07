@@ -1,7 +1,8 @@
-const ALLOWED_HOSTS = new Set([
+const ALLOWED_SUFFIXES = [
   "hgmtv.com",
-  "lnd0t3b922.tenbytecdn.com",
-]);
+  "tenbytecdn.com",
+  "beritasatumedia.com",
+];
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -10,14 +11,29 @@ const CORS: Record<string, string> = {
   "Cache-Control": "no-store",
 };
 
+function isAllowedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return ALLOWED_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
 function isAllowed(target: URL): boolean {
   if (target.protocol !== "https:" && target.protocol !== "http:") return false;
-  return ALLOWED_HOSTS.has(target.hostname);
+  return isAllowedHost(target.hostname);
 }
 
 function refererFor(target: URL): string {
-  if (target.hostname === "hgmtv.com") return "https://garuda.tv/live/";
+  if (target.hostname === "hgmtv.com" || target.hostname.endsWith(".hgmtv.com")) {
+    return "https://garuda.tv/live/";
+  }
   return "https://www.beritasatu.com/btv-live-streaming";
+}
+
+function originFor(referer: string): string {
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return referer;
+  }
 }
 
 function rewritePlaylist(body: string, playlistUrl: URL): string {
@@ -56,6 +72,7 @@ async function proxyHls(request: Request): Promise<Response> {
     return new Response("forbidden", { status: 403, headers: CORS });
   }
 
+  const referer = refererFor(target);
   const upstream = await fetch(target.toString(), {
     method: "GET",
     redirect: "follow",
@@ -63,20 +80,31 @@ async function proxyHls(request: Request): Promise<Response> {
       "User-Agent":
         request.headers.get("User-Agent") ??
         "Mozilla/5.0 (compatible; SitRoomTV/1.0)",
-      Referer: refererFor(target),
-      Origin: refererFor(target).replace(/\/$/, ""),
+      Referer: referer,
+      Origin: originFor(referer),
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
     },
   });
+
+  let playlistBase = target;
+  try {
+    const finalUrl = new URL(upstream.url);
+    if (isAllowed(finalUrl)) playlistBase = finalUrl;
+  } catch {
+    /* keep original target as rewrite base */
+  }
 
   const contentType = upstream.headers.get("content-type") ?? "";
   const isPlaylist =
     contentType.includes("mpegurl") ||
     contentType.includes("x-mpegURL") ||
-    target.pathname.endsWith(".m3u8");
+    target.pathname.endsWith(".m3u8") ||
+    playlistBase.pathname.endsWith(".m3u8");
 
   if (isPlaylist) {
     const text = await upstream.text();
-    return new Response(rewritePlaylist(text, target), {
+    return new Response(rewritePlaylist(text, playlistBase), {
       status: upstream.status,
       headers: {
         ...CORS,
