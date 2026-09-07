@@ -1,4 +1,4 @@
-/** Sumber live YouTube untuk wall Monitoring TV Sitroom (8 slot). */
+/** Sumber live YouTube untuk wall Monitoring TV Sitroom (11 slot). */
 export type TvCategoryId =
   | "tvone"
   | "kompas"
@@ -7,6 +7,9 @@ export type TvCategoryId =
   | "cnn"
   | "inews"
   | "cnbc"
+  | "garuda"
+  | "nusantara"
+  | "btv"
   | "internasional";
 
 export interface TvStreamOption {
@@ -145,6 +148,23 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
     videoId: "z31jg2THbWM",
   },
 
+  /* —— Garuda TV / Nusantara TV / BTV —— */
+  {
+    id: "garuda-channel",
+    label: "Garuda TV (channel live)",
+    channelId: "UCmXp0n4Oq8DGzjRZj3EvG4Q",
+  },
+  {
+    id: "nusantara-channel",
+    label: "Nusantara TV (channel live)",
+    channelId: "UCAMpZJJNQPZ6q7ZYKJV1igQ",
+  },
+  {
+    id: "btv-channel",
+    label: "BTV (channel live)",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+
   /* —— Internasional —— */
   {
     id: "aje",
@@ -189,7 +209,7 @@ function optionsWithDefaults(...preferredIds: string[]): TvStreamOption[] {
 }
 
 /**
- * 8 slot wall — tiap menu berisi banyak opsi cadangan
+ * 11 slot wall — tiap menu berisi banyak opsi cadangan
  * supaya selalu ada yang bisa diputar.
  */
 export const TV_CATEGORIES: TvCategory[] = [
@@ -242,8 +262,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "MetroTV",
     hint: "Banyak live Metro · coba opsi lain jika mati",
     options: optionsWithDefaults(
-      "metro-24jam",
       "metro-channel",
+      "metro-24jam",
       "metro-bn-raker",
       "metro-bn-rdp",
       "metro-lambe",
@@ -300,6 +320,51 @@ export const TV_CATEGORIES: TvCategory[] = [
       "tvone-24jam",
       "inews-24jam",
       "sindo-24jam",
+    ),
+  },
+  {
+    id: "garuda",
+    title: "Garuda TV",
+    hint: "Channel live + cadangan nasional",
+    options: optionsWithDefaults(
+      "garuda-channel",
+      "nusantara-channel",
+      "btv-channel",
+      "cnnid-24jam",
+      "metro-24jam",
+      "kompas-24jam",
+      "tvone-24jam",
+      "inews-24jam",
+    ),
+  },
+  {
+    id: "nusantara",
+    title: "Nusantara TV",
+    hint: "Channel live + cadangan nasional",
+    options: optionsWithDefaults(
+      "nusantara-channel",
+      "garuda-channel",
+      "btv-channel",
+      "kompas-24jam",
+      "cnnid-24jam",
+      "metro-24jam",
+      "tvone-24jam",
+      "inews-24jam",
+    ),
+  },
+  {
+    id: "btv",
+    title: "BTV",
+    hint: "Channel live + cadangan nasional",
+    options: optionsWithDefaults(
+      "btv-channel",
+      "garuda-channel",
+      "nusantara-channel",
+      "cnbc-channel",
+      "cnnid-24jam",
+      "metro-24jam",
+      "kompas-24jam",
+      "tvone-24jam",
     ),
   },
   {

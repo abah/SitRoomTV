@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "SitRoom TV — wall monitoring 8 kanal TV live",
+  "description": "SitRoom TV — wall monitoring 11 kanal TV live",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

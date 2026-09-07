@@ -43,7 +43,7 @@ function App() {
           <span className="sr-live-dot" aria-hidden />
           <div>
             <h1>SitRoom TV</h1>
-            <p>Situation Room · Monitoring 8 kanal live</p>
+            <p>Situation Room · Monitoring 11 kanal live</p>
           </div>
         </div>
         <div className="sr-app-meta">
@@ -57,7 +57,7 @@ function App() {
       <main className="sr-app-main">
         <TvLiveWall
           title="Kanal TV Live"
-          subtitle="8 kanal · banyak link cadangan per stasiun · ↻ ganti jika mati"
+          subtitle="11 kanal · banyak link cadangan per stasiun · ↻ ganti jika mati"
         />
       </main>
     </div>
