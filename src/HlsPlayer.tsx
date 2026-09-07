@@ -14,6 +14,7 @@ export default function HlsPlayer({
     if (!video) return;
     let destroyed = false;
     let hls: { destroy: () => void } | undefined;
+    const playSrc = `/hls?u=${encodeURIComponent(src)}`;
 
     const tryPlay = () => {
       void video.play().catch(() => {
@@ -22,7 +23,7 @@ export default function HlsPlayer({
     };
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = src;
+      video.src = playSrc;
       tryPlay();
       return () => {
         video.removeAttribute("src");
@@ -38,7 +39,7 @@ export default function HlsPlayer({
         backBufferLength: 30,
       });
       hls = instance;
-      instance.loadSource(src);
+      instance.loadSource(playSrc);
       instance.attachMedia(video);
       instance.on(Hls.Events.MANIFEST_PARSED, tryPlay);
     });
