@@ -1,16 +1,13 @@
-/** Sumber live YouTube untuk wall Monitoring TV Sitroom (11 slot). */
+/** Sumber live YouTube untuk wall Monitoring TV Sitroom (8 slot). */
 export type TvCategoryId =
   | "tvone"
   | "kompas"
   | "tvri"
   | "metro"
   | "cnn"
-  | "inews"
-  | "cnbc"
   | "garuda"
   | "nusantara"
-  | "btv"
-  | "internasional";
+  | "btv";
 
 export interface TvStreamOption {
   id: string;
@@ -273,8 +270,8 @@ function optionsWithDefaults(...preferredIds: string[]): TvStreamOption[] {
 }
 
 /**
- * 11 slot wall — tiap menu berisi banyak opsi cadangan
- * supaya selalu ada yang bisa diputar.
+ * 8 slot wall — Garuda / Nusantara / BTV mengganti slot extra.
+ * Tiap menu tetap punya banyak opsi cadangan.
  */
 export const TV_CATEGORIES: TvCategory[] = [
   {
@@ -357,36 +354,6 @@ export const TV_CATEGORIES: TvCategory[] = [
     ),
   },
   {
-    id: "inews",
-    title: "iNews",
-    hint: "Nasional + regional · ganti jika mati",
-    options: optionsWithDefaults(
-      "inews-24jam",
-      "inews-sumut",
-      "inews-jatim",
-      "sindo-24jam",
-      "cnnid-24jam",
-      "metro-24jam",
-      "tvone-24jam",
-      "kompas-24jam",
-    ),
-  },
-  {
-    id: "cnbc",
-    title: "CNBC Indonesia",
-    hint: "Bisnis + cadangan berita nasional",
-    options: optionsWithDefaults(
-      "cnbc-channel",
-      "cnnid-24jam",
-      "cnnid-channel",
-      "metro-24jam",
-      "kompas-24jam",
-      "tvone-24jam",
-      "inews-24jam",
-      "sindo-24jam",
-    ),
-  },
-  {
     id: "garuda",
     title: "Garuda TV",
     hint: "Live + breaking · ganti jika mati",
@@ -435,20 +402,6 @@ export const TV_CATEGORIES: TvCategory[] = [
       "nusantara-krakatau",
       "cnbc-channel",
       "cnnid-24jam",
-    ),
-  },
-  {
-    id: "internasional",
-    title: "Internasional",
-    hint: "Al Jazeera · Sky · France 24 · DW · Euronews",
-    options: optionsWithDefaults(
-      "aje",
-      "sky",
-      "france24",
-      "dw",
-      "euronews",
-      "cnnid-24jam",
-      "metro-24jam",
     ),
   },
 ];
