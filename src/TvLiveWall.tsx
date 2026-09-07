@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,15 +13,19 @@ import {
 } from "lucide-react";
 import {
   TV_CATEGORIES,
+  TV_STREAM_CATALOG,
+  defaultSlotStreamIds,
   embedUrl,
-  emptyPlayingState,
+  emptyPlayingSlots,
   isHlsOption,
-  nextOptionId,
+  nextCatalogOptionId,
   openSourceLabel,
+  optionById,
   watchUrl,
-  type TvCategoryId,
 } from "./tvStreams";
 import HlsPlayer from "./HlsPlayer";
+
+const SLOT_STORAGE_KEY = "sitroom-tv-slots";
 
 type FsElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -38,6 +42,24 @@ function isFsActive(el: Element | null): boolean {
   );
 }
 
+function loadSlotStreams(): string[] {
+  const defaults = defaultSlotStreamIds();
+  try {
+    const raw = localStorage.getItem(SLOT_STORAGE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return defaults;
+    return defaults.map((fallback, i) => {
+      const id = parsed[i];
+      return typeof id === "string" && TV_STREAM_CATALOG.some((o) => o.id === id)
+        ? id
+        : fallback;
+    });
+  } catch {
+    return defaults;
+  }
+}
+
 export default function TvLiveWall({
   title = "Kanal TV Live",
   subtitle,
@@ -52,64 +74,76 @@ export default function TvLiveWall({
   className?: string;
 }) {
   const wallFsRef = useRef<HTMLDivElement>(null);
+  const slotCount = TV_CATEGORIES.length;
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<Record<TvCategoryId, string>>(() =>
-    Object.fromEntries(
-      TV_CATEGORIES.map((c) => [c.id, c.options[0].id]),
-    ) as Record<TvCategoryId, string>,
+  const [selected, setSelected] = useState<string[]>(loadSlotStreams);
+  const [playing, setPlaying] = useState<boolean[]>(() =>
+    emptyPlayingSlots(slotCount),
   );
-  const [playing, setPlaying] =
-    useState<Record<TvCategoryId, boolean>>(emptyPlayingState);
-  const [enlarged, setEnlarged] = useState<TvCategoryId | null>(null);
+  const [enlarged, setEnlarged] = useState<number | null>(null);
   const [wallOpen, setWallOpen] = useState(false);
   const [wallFs, setWallFs] = useState(false);
 
-  const pageCount = Math.max(1, Math.ceil(TV_CATEGORIES.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(slotCount / pageSize));
   const safePage = Math.min(page, pageCount - 1);
-  const visible = TV_CATEGORIES.slice(
-    safePage * pageSize,
-    safePage * pageSize + pageSize,
-  );
-  const visibleIds = visible.map((c) => c.id);
+  const visibleSlots = Array.from(
+    { length: pageSize },
+    (_, i) => safePage * pageSize + i,
+  ).filter((i) => i < slotCount);
   const countLabel = `${pageSize} TV`;
   const resolvedSubtitle =
     subtitle ??
     (pageSize === 4
-      ? `4 stasiun per halaman · ${pageCount} halaman · mute · fullscreen`
-      : "8 kanal live · mute · fullscreen wall untuk monitoring");
+      ? `4 layar per halaman · pilih stasiun di tiap kotak`
+      : "8 layar · pilih stasiun bebas di tiap kotak");
+
+  useEffect(() => {
+    localStorage.setItem(SLOT_STORAGE_KEY, JSON.stringify(selected));
+  }, [selected]);
 
   const playVisible = (on = true) => {
     setPlaying((p) => {
-      const next = { ...p };
-      for (const id of visibleIds) next[id] = on;
+      const next = [...p];
+      for (const i of visibleSlots) next[i] = on;
       return next;
     });
   };
 
-  const optionFor = (catId: TvCategoryId) => {
-    const cat = TV_CATEGORIES.find((c) => c.id === catId)!;
-    return (
-      cat.options.find((o) => o.id === selected[catId]) ?? cat.options[0]
-    );
+  const optionFor = (slot: number) => optionById(selected[slot]);
+
+  const tryNextLink = (slot: number) => {
+    setSelected((s) => {
+      const next = [...s];
+      next[slot] = nextCatalogOptionId(s[slot]);
+      return next;
+    });
+    setPlaying((p) => {
+      const next = [...p];
+      next[slot] = true;
+      return next;
+    });
   };
 
-  const tryNextLink = (catId: TvCategoryId) => {
-    setSelected((s) => ({
-      ...s,
-      [catId]: nextOptionId(catId, s[catId]),
-    }));
-    setPlaying((p) => ({ ...p, [catId]: true }));
+  const setSlotStream = (slot: number, id: string, start = false) => {
+    setSelected((s) => {
+      const next = [...s];
+      next[slot] = id;
+      return next;
+    });
+    if (start) {
+      setPlaying((p) => {
+        const next = [...p];
+        next[slot] = true;
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
     setPage((n) => Math.min(n, Math.max(0, pageCount - 1)));
   }, [pageCount]);
 
-  const enlargedCat = useMemo(
-    () => TV_CATEGORIES.find((c) => c.id === enlarged) ?? null,
-    [enlarged],
-  );
-  const enlargedOpt = enlarged ? optionFor(enlarged) : null;
+  const enlargedOpt = enlarged != null ? optionFor(enlarged) : null;
 
   const openWall = () => {
     playVisible(true);
@@ -166,26 +200,33 @@ export default function TvLiveWall({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallOpen]);
 
-  const renderPlayer = (
-    catId: TvCategoryId,
-    mode: "grid" | "wall" | "single",
-  ) => {
-    const cat = TV_CATEGORIES.find((c) => c.id === catId)!;
-    const opt = optionFor(catId);
-    const isPlaying = playing[catId] || mode === "wall" || mode === "single";
+  const streamSelect = (slot: number, mini = false) => (
+    <select
+      className={`sr-tv-select${mini ? " sr-tv-select-mini" : ""}`}
+      value={selected[slot]}
+      onChange={(e) => setSlotStream(slot, e.target.value, !mini)}
+    >
+      {TV_STREAM_CATALOG.map((o) => (
+        <option key={o.id} value={o.id}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+
+  const renderPlayer = (slot: number, mode: "grid" | "wall" | "single") => {
+    const opt = optionFor(slot);
+    const isPlaying = playing[slot] || mode === "wall" || mode === "single";
 
     return (
       <div
-        key={`${mode}-${catId}`}
+        key={`${mode}-${slot}`}
         className={`sr-tv-player${mode === "wall" ? " wall" : ""}`}
       >
         {mode !== "single" && (
           <div className="sr-tv-player-head">
             <div>
-              <b>{cat.title}</b>
-              <small>
-                {mode === "wall" ? opt.label : cat.hint}
-              </small>
+              <small>Layar {slot + 1}</small>
             </div>
             {mode === "grid" && (
               <div className="sr-tv-player-actions">
@@ -193,16 +234,20 @@ export default function TvLiveWall({
                   className="btn small"
                   type="button"
                   onClick={() =>
-                    setPlaying((p) => ({ ...p, [catId]: !p[catId] }))
+                    setPlaying((p) => {
+                      const next = [...p];
+                      next[slot] = !next[slot];
+                      return next;
+                    })
                   }
                 >
-                  {playing[catId] ? "Pause" : "Putar"}
+                  {playing[slot] ? "Pause" : "Putar"}
                 </button>
                 <button
                   className="btn small"
                   type="button"
-                  title="Coba link live berikutnya"
-                  onClick={() => tryNextLink(catId)}
+                  title="Coba link berikutnya"
+                  onClick={() => tryNextLink(slot)}
                 >
                   <RefreshCw size={13} />
                 </button>
@@ -210,10 +255,14 @@ export default function TvLiveWall({
                   className="btn small"
                   type="button"
                   onClick={() => {
-                    setPlaying((p) => ({ ...p, [catId]: true }));
-                    setEnlarged(catId);
+                    setPlaying((p) => {
+                      const next = [...p];
+                      next[slot] = true;
+                      return next;
+                    });
+                    setEnlarged(slot);
                   }}
-                  title="Perbesar satu kanal"
+                  title="Perbesar"
                 >
                   <Expand size={13} />
                 </button>
@@ -221,24 +270,12 @@ export default function TvLiveWall({
             )}
             {mode === "wall" && (
               <div className="sr-tv-wall-pick">
-                <select
-                  className="sr-tv-select sr-tv-select-mini"
-                  value={selected[catId]}
-                  onChange={(e) => {
-                    setSelected((s) => ({ ...s, [catId]: e.target.value }));
-                  }}
-                >
-                  {cat.options.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                {streamSelect(slot, true)}
                 <button
                   className="btn small"
                   type="button"
-                  title="Coba link live berikutnya"
-                  onClick={() => tryNextLink(catId)}
+                  title="Coba link berikutnya"
+                  onClick={() => tryNextLink(slot)}
                 >
                   <RefreshCw size={12} />
                 </button>
@@ -248,22 +285,9 @@ export default function TvLiveWall({
         )}
         {mode === "grid" && (
           <>
-            <select
-              className="sr-tv-select"
-              value={selected[catId]}
-              onChange={(e) => {
-                setSelected((s) => ({ ...s, [catId]: e.target.value }));
-                setPlaying((p) => ({ ...p, [catId]: true }));
-              }}
-            >
-              {cat.options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            {streamSelect(slot)}
             <small className="sr-tv-option-hint">
-              {cat.options.length} opsi · jika mati pilih link lain / ↻
+              Pilih stasiun bebas · {TV_STREAM_CATALOG.length} opsi · ↻ ganti link
             </small>
           </>
         )}
@@ -271,15 +295,15 @@ export default function TvLiveWall({
           {isPlaying ? (
             isHlsOption(opt) && opt.hlsUrl ? (
               <HlsPlayer
-                key={`${mode}-${catId}-${opt.id}`}
+                key={`${mode}-${slot}-${opt.id}`}
                 src={opt.hlsUrl}
-                title={`${cat.title} — ${opt.label}`}
+                title={opt.label}
               />
             ) : (
               <iframe
-                key={`${mode}-${catId}-${opt.id}`}
+                key={`${mode}-${slot}-${opt.id}`}
                 src={embedUrl(opt, true)}
-                title={`${cat.title} — ${opt.label}`}
+                title={opt.label}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 referrerPolicy="strict-origin-when-cross-origin"
@@ -289,7 +313,13 @@ export default function TvLiveWall({
             <button
               type="button"
               className="sr-tv-poster"
-              onClick={() => setPlaying((p) => ({ ...p, [catId]: true }))}
+              onClick={() =>
+                setPlaying((p) => {
+                  const next = [...p];
+                  next[slot] = true;
+                  return next;
+                })
+              }
             >
               <span className="sr-tv-play" aria-hidden>
                 <Play size={20} fill="currentColor" />
@@ -350,7 +380,7 @@ export default function TvLiveWall({
               type="button"
               className="btn small"
               onClick={() => playVisible(true)}
-              title="Putar kanal di halaman ini"
+              title="Putar layar di halaman ini"
             >
               <Play size={13} /> Putar semua
             </button>
@@ -366,7 +396,7 @@ export default function TvLiveWall({
         </div>
 
         <div className={`sr-tv-grid sr-tv-grid-${pageSize}`}>
-          {visible.map((cat) => renderPlayer(cat.id, "grid"))}
+          {visibleSlots.map((slot) => renderPlayer(slot, "grid"))}
         </div>
       </div>
 
@@ -376,7 +406,7 @@ export default function TvLiveWall({
             <header className="sr-tv-wall-bar">
               <div>
                 <b>
-                  Monitoring TV — {visible.length} kanal
+                  Monitoring TV — {visibleSlots.length} layar
                   {pageCount > 1 ? ` · halaman ${safePage + 1}/${pageCount}` : ""}
                 </b>
                 <small>
@@ -404,43 +434,28 @@ export default function TvLiveWall({
               </div>
             </header>
             <div className={`sr-tv-wall-grid sr-tv-wall-grid-${pageSize}`}>
-              {visible.map((cat) => renderPlayer(cat.id, "wall"))}
+              {visibleSlots.map((slot) => renderPlayer(slot, "wall"))}
             </div>
           </div>
         </div>
       )}
 
-      {enlarged && enlargedCat && enlargedOpt && (
+      {enlarged != null && enlargedOpt && (
         <div className="sr-screen-overlay" role="dialog" aria-modal>
           <div className="sr-screen sr-tv-enlarged">
             <header className="sr-screen-bar">
               <div>
                 <b>
-                  {enlargedCat.title} — {enlargedOpt.label}
+                  Layar {enlarged + 1} — {enlargedOpt.label}
                 </b>
-                <small>{enlargedCat.hint}</small>
+                <small>Pilih stasiun dari menu</small>
               </div>
               <div className="sr-screen-actions">
-                <select
-                  className="sr-tv-select sr-tv-select-mini"
-                  value={selected[enlarged]}
-                  onChange={(e) => {
-                    setSelected((s) => ({
-                      ...s,
-                      [enlarged]: e.target.value,
-                    }));
-                  }}
-                >
-                  {enlargedCat.options.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                {streamSelect(enlarged, true)}
                 <button
                   className="btn small"
                   type="button"
-                  title="Coba link live berikutnya"
+                  title="Coba link berikutnya"
                   onClick={() => tryNextLink(enlarged)}
                 >
                   <RefreshCw size={14} /> Link lain
@@ -473,13 +488,13 @@ export default function TvLiveWall({
                 <HlsPlayer
                   key={`enlarged-${enlarged}-${enlargedOpt.id}`}
                   src={enlargedOpt.hlsUrl}
-                  title={`${enlargedCat.title} — ${enlargedOpt.label}`}
+                  title={enlargedOpt.label}
                 />
               ) : (
                 <iframe
                   key={`enlarged-${enlarged}-${enlargedOpt.id}`}
                   src={embedUrl(enlargedOpt, true)}
-                  title={`${enlargedCat.title} — ${enlargedOpt.label}`}
+                  title={enlargedOpt.label}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   referrerPolicy="strict-origin-when-cross-origin"

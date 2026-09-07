@@ -436,27 +436,25 @@ export const TV_CATEGORIES: TvCategory[] = [
   },
 ];
 
-export function emptyPlayingState(): Record<TvCategoryId, boolean> {
-  return Object.fromEntries(
-    TV_CATEGORIES.map((c) => [c.id, false]),
-  ) as Record<TvCategoryId, boolean>;
+export function optionById(id: string): TvStreamOption {
+  return (
+    TV_STREAM_CATALOG.find((o) => o.id === id) ?? TV_STREAM_CATALOG[0]
+  );
 }
 
-export function allPlayingState(on = true): Record<TvCategoryId, boolean> {
-  return Object.fromEntries(
-    TV_CATEGORIES.map((c) => [c.id, on]),
-  ) as Record<TvCategoryId, boolean>;
+export function defaultSlotStreamIds(): string[] {
+  return TV_CATEGORIES.map((c) => c.options[0]?.id ?? TV_STREAM_CATALOG[0].id);
 }
 
-export function nextOptionId(
-  catId: TvCategoryId,
-  currentId: string,
-): string {
-  const cat = TV_CATEGORIES.find((c) => c.id === catId);
-  if (!cat?.options.length) return currentId;
-  const idx = cat.options.findIndex((o) => o.id === currentId);
-  const next = cat.options[(idx + 1) % cat.options.length];
-  return next?.id ?? cat.options[0].id;
+export function nextCatalogOptionId(currentId: string): string {
+  if (!TV_STREAM_CATALOG.length) return currentId;
+  const idx = TV_STREAM_CATALOG.findIndex((o) => o.id === currentId);
+  const next = TV_STREAM_CATALOG[(idx + 1) % TV_STREAM_CATALOG.length];
+  return next?.id ?? TV_STREAM_CATALOG[0].id;
+}
+
+export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
+  return Array.from({ length: count }, () => false);
 }
 
 export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {

@@ -103,8 +103,8 @@ function App() {
           title="Kanal TV Live"
           subtitle={
             pageSize === 4
-              ? "4 stasiun per halaman · Next untuk stasiun berikutnya · ↻ ganti jika mati"
-              : "8 kanal · banyak link cadangan per stasiun · ↻ ganti jika mati"
+              ? "4 layar per halaman · pilih stasiun di tiap kotak"
+              : "8 layar · pilih stasiun bebas di tiap kotak"
           }
         />
       </main>
