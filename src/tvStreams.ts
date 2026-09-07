@@ -129,9 +129,38 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
     channelId: "UCGN9JsnkvK05v2lnTI_-uGA",
   },
   {
+    id: "inews-site",
+    label: "iNews live (inews.id)",
+    hlsUrl: "https://inews-linier.rctiplus.id/inews-sdi.m3u8",
+    pageUrl: "https://tv.inews.id/streaming",
+    channelId: "UCoSkllfpgmFHtbVK835QaQg",
+  },
+  {
     id: "inews-24jam",
     label: "iNews 24 jam",
+    videoId: "5IGEHUxFhiU",
+    channelId: "UCoSkllfpgmFHtbVK835QaQg",
+  },
+  {
+    id: "inews-24jam-alt",
+    label: "iNews 24 jam (cadangan YouTube)",
     videoId: "WHTPYAvakTg",
+    channelId: "UCoSkllfpgmFHtbVK835QaQg",
+  },
+  {
+    id: "inews-channel",
+    label: "iNews (channel live)",
+    channelId: "UCoSkllfpgmFHtbVK835QaQg",
+  },
+  {
+    id: "inews-siaga",
+    label: "iNews Room · Siaga gunung api",
+    videoId: "RXPOmDvN7wU",
+  },
+  {
+    id: "inews-krakatau",
+    label: "iNews · Erupsi Anak Krakatau",
+    videoId: "VVuJcuZNv3A",
   },
   {
     id: "inews-sumut",
@@ -169,7 +198,7 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
     id: "btv-site",
     label: "BTV live (btv.id)",
     hlsUrl:
-      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/master.m3u8",
+      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/720p/index.m3u8",
     pageUrl: "https://www.beritasatu.com/btv-live-streaming",
     channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
   },
@@ -222,6 +251,12 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
   },
   {
     id: "btv-live",
+    label: "BTV live (YouTube)",
+    videoId: "4yPo5lJ0prA",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+  {
+    id: "btv-live-arah",
     label: "BTV live · Arah Baru Informasi",
     videoId: "bWS6nvXQUlM",
     channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
@@ -371,7 +406,10 @@ export const TV_CATEGORIES: TvCategory[] = [
       "cnnid-24jam",
       "cnnid-channel",
       "cnbc-channel",
+      "inews-site",
       "inews-24jam",
+      "inews-channel",
+      "inews-siaga",
       "inews-sumut",
       "inews-jatim",
       "sindo-24jam",
@@ -422,8 +460,9 @@ export const TV_CATEGORIES: TvCategory[] = [
     hint: "BTV + BeritaSatu · ganti jika mati",
     options: optionsWithDefaults(
       "btv-site",
-      "btv-channel",
       "btv-live",
+      "btv-channel",
+      "btv-live-arah",
       "btv-dampak",
       "btv-krakatau",
       "beritasatu-breaking",
