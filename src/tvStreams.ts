@@ -222,6 +222,12 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
   },
   {
     id: "btv-live",
+    label: "BTV live (YouTube)",
+    videoId: "4yPo5lJ0prA",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
+  {
+    id: "btv-live-arah",
     label: "BTV live · Arah Baru Informasi",
     videoId: "bWS6nvXQUlM",
     channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
@@ -422,8 +428,9 @@ export const TV_CATEGORIES: TvCategory[] = [
     hint: "BTV + BeritaSatu · ganti jika mati",
     options: optionsWithDefaults(
       "btv-site",
-      "btv-channel",
       "btv-live",
+      "btv-channel",
+      "btv-live-arah",
       "btv-dampak",
       "btv-krakatau",
       "beritasatu-breaking",
