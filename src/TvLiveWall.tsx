@@ -15,10 +15,13 @@ import {
   TV_CATEGORIES,
   embedUrl,
   emptyPlayingState,
+  isHlsOption,
   nextOptionId,
+  openSourceLabel,
   watchUrl,
   type TvCategoryId,
 } from "./tvStreams";
+import HlsPlayer from "./HlsPlayer";
 
 type FsElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -266,14 +269,22 @@ export default function TvLiveWall({
         )}
         <div className="sr-tv-frame">
           {isPlaying ? (
-            <iframe
-              key={`${mode}-${catId}-${opt.id}`}
-              src={embedUrl(opt, true)}
-              title={`${cat.title} — ${opt.label}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
+            isHlsOption(opt) && opt.hlsUrl ? (
+              <HlsPlayer
+                key={`${mode}-${catId}-${opt.id}`}
+                src={opt.hlsUrl}
+                title={`${cat.title} — ${opt.label}`}
+              />
+            ) : (
+              <iframe
+                key={`${mode}-${catId}-${opt.id}`}
+                src={embedUrl(opt, true)}
+                title={`${cat.title} — ${opt.label}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            )
           ) : (
             <button
               type="button"
@@ -295,7 +306,7 @@ export default function TvLiveWall({
             target="_blank"
             rel="noreferrer"
           >
-            <ExternalLink size={12} /> Buka di YouTube
+            <ExternalLink size={12} /> {openSourceLabel(opt)}
           </a>
         )}
       </div>
@@ -450,7 +461,7 @@ export default function TvLiveWall({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <ExternalLink size={14} /> YouTube
+                  <ExternalLink size={14} /> {openSourceLabel(enlargedOpt)}
                 </a>
                 <button className="btn small" onClick={() => setEnlarged(null)}>
                   <X size={14} /> Tutup
@@ -458,14 +469,22 @@ export default function TvLiveWall({
               </div>
             </header>
             <div className="sr-tv-enlarged-frame">
-              <iframe
-                key={`enlarged-${enlarged}-${enlargedOpt.id}`}
-                src={embedUrl(enlargedOpt, true)}
-                title={`${enlargedCat.title} — ${enlargedOpt.label}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
+              {isHlsOption(enlargedOpt) && enlargedOpt.hlsUrl ? (
+                <HlsPlayer
+                  key={`enlarged-${enlarged}-${enlargedOpt.id}`}
+                  src={enlargedOpt.hlsUrl}
+                  title={`${enlargedCat.title} — ${enlargedOpt.label}`}
+                />
+              ) : (
+                <iframe
+                  key={`enlarged-${enlarged}-${enlargedOpt.id}`}
+                  src={embedUrl(enlargedOpt, true)}
+                  title={`${enlargedCat.title} — ${enlargedOpt.label}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              )}
             </div>
           </div>
         </div>

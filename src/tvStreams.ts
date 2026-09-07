@@ -16,6 +16,10 @@ export interface TvStreamOption {
   videoId?: string;
   /** Fallback: channel live_stream embed jika videoId kosong. */
   channelId?: string;
+  /** HLS resmi dari situs stasiun (m3u8). */
+  hlsUrl?: string;
+  /** Halaman resmi live. */
+  pageUrl?: string;
 }
 
 export interface TvCategory {
@@ -146,6 +150,29 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
   },
 
   /* —— Garuda TV / Nusantara TV / BTV —— */
+  {
+    id: "garuda-site",
+    label: "Garuda TV live (garuda.tv)",
+    hlsUrl:
+      "https://hgmtv.com:2020/hls/garudatvlivestreaming/garudatvlivestreaming.m3u8",
+    pageUrl: "https://garuda.tv/live/",
+    channelId: "UCmXp0n4Oq8DGzjRZj3EvG4Q",
+  },
+  {
+    id: "garuda-site-alt",
+    label: "Garuda TV live (cadangan HLS)",
+    hlsUrl:
+      "https://hgmtv.com:19360/garudatvlivestreaming/garudatvlivestreaming.m3u8",
+    pageUrl: "https://garuda.tv/live/",
+  },
+  {
+    id: "btv-site",
+    label: "BTV live (btv.id)",
+    hlsUrl:
+      "https://lnd0t3b922.tenbytecdn.com/ta-sg1/90369cf5-6ac2-411d-b3d0-15fae10a2e2c/master.m3u8",
+    pageUrl: "https://www.beritasatu.com/btv-live-streaming",
+    channelId: "UCo6NXGgBiaXcvdF2vHXGB4A",
+  },
   {
     id: "garuda-live",
     label: "Garuda TV live",
@@ -358,10 +385,12 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "Garuda TV",
     hint: "Live + breaking · ganti jika mati",
     options: optionsWithDefaults(
+      "garuda-site",
+      "garuda-site-alt",
+      "garuda-channel",
+      "garuda-live",
       "garuda-breaking",
       "garuda-halim",
-      "garuda-live",
-      "garuda-channel",
       "nusantara-krakatau",
       "btv-dampak",
       "cnnid-24jam",
@@ -392,11 +421,12 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "BTV",
     hint: "BTV + BeritaSatu · ganti jika mati",
     options: optionsWithDefaults(
-      "btv-dampak",
+      "btv-site",
+      "btv-channel",
       "btv-live",
+      "btv-dampak",
       "btv-krakatau",
       "beritasatu-breaking",
-      "btv-channel",
       "beritasatu-channel",
       "garuda-breaking",
       "nusantara-krakatau",
@@ -430,6 +460,7 @@ export function nextOptionId(
 }
 
 export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
+  if (opt.hlsUrl) return opt.hlsUrl;
   const params = new URLSearchParams({
     autoplay: autoplay ? "1" : "0",
     mute: "1",
@@ -447,7 +478,18 @@ export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
 }
 
 export function watchUrl(opt: TvStreamOption): string {
+  if (opt.pageUrl) return opt.pageUrl;
   if (opt.videoId) return `https://www.youtube.com/watch?v=${opt.videoId}`;
   if (opt.channelId) return `https://www.youtube.com/channel/${opt.channelId}/live`;
+  if (opt.hlsUrl) return opt.hlsUrl;
   return "https://www.youtube.com";
+}
+
+export function isHlsOption(opt: TvStreamOption): boolean {
+  return Boolean(opt.hlsUrl);
+}
+
+export function openSourceLabel(opt: TvStreamOption): string {
+  if (opt.pageUrl || opt.hlsUrl) return "Buka situs resmi";
+  return "Buka di YouTube";
 }
