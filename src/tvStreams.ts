@@ -18,6 +18,8 @@ export interface TvStreamOption {
   channelId?: string;
   /** HLS resmi dari situs stasiun (m3u8). */
   hlsUrl?: string;
+  /** Iframe player resmi (bukan YouTube). */
+  embedSrc?: string;
   /** Halaman resmi live. */
   pageUrl?: string;
 }
@@ -112,6 +114,21 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
   },
 
   /* —— CNN / CNBC / iNews / Sindo —— */
+  {
+    id: "cnnid-site",
+    label: "CNN Indonesia live (transtv.co.id)",
+    embedSrc:
+      "https://www.cnnindonesia.com/tv/embed?ref=transmedia&smartautoplay=true",
+    pageUrl: "https://www.transtv.co.id/live/cnn",
+    channelId: "UCKII0Ml9S5wneKbHswmUrIQ",
+  },
+  {
+    id: "cnnid-hls",
+    label: "CNN Indonesia live (HLS resmi)",
+    hlsUrl:
+      "https://live.cnnindonesia.com/livecnn/smil:cnntv.smil/playlist.m3u8",
+    pageUrl: "https://www.transtv.co.id/live/cnn",
+  },
   {
     id: "cnnid-24jam",
     label: "CNN Indonesia 24 jam",
@@ -403,6 +420,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "CNN Indonesia",
     hint: "CNN + cadangan berita nasional",
     options: optionsWithDefaults(
+      "cnnid-site",
+      "cnnid-hls",
       "cnnid-24jam",
       "cnnid-channel",
       "cnbc-channel",
@@ -498,6 +517,7 @@ export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
 
 export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
   if (opt.hlsUrl) return opt.hlsUrl;
+  if (opt.embedSrc) return opt.embedSrc;
   const params = new URLSearchParams({
     autoplay: autoplay ? "1" : "0",
     mute: "1",
@@ -516,6 +536,7 @@ export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
 
 export function watchUrl(opt: TvStreamOption): string {
   if (opt.pageUrl) return opt.pageUrl;
+  if (opt.embedSrc) return opt.embedSrc;
   if (opt.videoId) return `https://www.youtube.com/watch?v=${opt.videoId}`;
   if (opt.channelId) return `https://www.youtube.com/channel/${opt.channelId}/live`;
   if (opt.hlsUrl) return opt.hlsUrl;
@@ -527,6 +548,6 @@ export function isHlsOption(opt: TvStreamOption): boolean {
 }
 
 export function openSourceLabel(opt: TvStreamOption): string {
-  if (opt.pageUrl || opt.hlsUrl) return "Buka situs resmi";
+  if (opt.pageUrl || opt.hlsUrl || opt.embedSrc) return "Buka situs resmi";
   return "Buka di YouTube";
 }

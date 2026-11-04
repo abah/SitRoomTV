@@ -7,6 +7,7 @@ const ALLOWED_SUFFIXES = [
   "tenbytecdn.com",
   "beritasatumedia.com",
   "rctiplus.id",
+  "cnnindonesia.com",
 ];
 
 const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
@@ -41,6 +42,9 @@ async function resolveInewsMaster(): Promise<string> {
 function refererFor(hostname: string): string {
   if (hostname.includes("hgmtv")) return "https://garuda.tv/live/";
   if (hostname.includes("rctiplus")) return INEWS_EMBED;
+  if (hostname.includes("cnnindonesia")) {
+    return "https://www.cnnindonesia.com/tv/embed?ref=transmedia";
+  }
   return "https://www.beritasatu.com/btv-live-streaming";
 }
 

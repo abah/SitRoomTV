@@ -3,6 +3,7 @@ const ALLOWED_SUFFIXES = [
   "tenbytecdn.com",
   "beritasatumedia.com",
   "rctiplus.id",
+  "cnnindonesia.com",
 ];
 
 const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
@@ -62,6 +63,12 @@ function refererFor(target: URL): string {
     target.hostname === "rctiplus.id"
   ) {
     return INEWS_EMBED;
+  }
+  if (
+    target.hostname === "cnnindonesia.com" ||
+    target.hostname.endsWith(".cnnindonesia.com")
+  ) {
+    return "https://www.cnnindonesia.com/tv/embed?ref=transmedia";
   }
   return "https://www.beritasatu.com/btv-live-streaming";
 }
