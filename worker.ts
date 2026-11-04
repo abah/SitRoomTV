@@ -5,6 +5,7 @@ const ALLOWED_SUFFIXES = [
   "rctiplus.id",
   "cnnindonesia.com",
   "medcom.id",
+  "tvri.go.id",
 ];
 
 const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
@@ -76,6 +77,12 @@ function refererFor(target: URL): string {
     target.hostname.endsWith(".medcom.id")
   ) {
     return "https://www.metrotvnews.com/live";
+  }
+  if (
+    target.hostname === "tvri.go.id" ||
+    target.hostname.endsWith(".tvri.go.id")
+  ) {
+    return "https://www.tvrinews.com/live";
   }
   return "https://www.beritasatu.com/btv-live-streaming";
 }

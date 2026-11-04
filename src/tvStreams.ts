@@ -122,6 +122,20 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
 
   /* —— TVRI —— */
   {
+    id: "tvri-site",
+    label: "TVRI Nasional live (tvri.go.id)",
+    hlsUrl:
+      "https://ott-balancer.tvri.go.id/live/eds/Nasional/hls/Nasional.m3u8",
+    pageUrl: "https://www.tvrinews.com/live",
+    channelId: "UCyIMsCzDRm8_y_6wM26_PWQ",
+  },
+  {
+    id: "tvri-sport",
+    label: "TVRI Sport live",
+    hlsUrl: "https://ott-balancer.tvri.go.id/live/eds/SportHD/hls/SportHD.m3u8",
+    pageUrl: "https://www.tvrinews.com/live",
+  },
+  {
     id: "tvri-channel",
     label: "TVRI Nasional (channel live)",
     channelId: "UCyIMsCzDRm8_y_6wM26_PWQ",
@@ -403,6 +417,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "TVRI",
     hint: "Channel live + cadangan nasional",
     options: optionsWithDefaults(
+      "tvri-site",
+      "tvri-sport",
       "tvri-channel",
       "kompas-24jam",
       "metro-24jam",
