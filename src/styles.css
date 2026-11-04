@@ -435,6 +435,28 @@ body {
   min-width: 0;
 }
 
+.sr-tv-url-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sr-tv-url {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--sr-line);
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: inherit;
+  background: var(--sr-input);
+  color: var(--sr-input-text);
+}
+
+.sr-tv-url::placeholder {
+  color: var(--sr-muted);
+}
+
 .sr-tv-option-hint {
   color: var(--sr-muted);
   font-size: 10px;

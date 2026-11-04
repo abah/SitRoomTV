@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  CUSTOM_STREAM_ID,
   TV_CATEGORIES,
   TV_STREAM_CATALOG,
   defaultSlotStreamIds,
@@ -21,11 +22,13 @@ import {
   nextCatalogOptionId,
   openSourceLabel,
   optionById,
+  parseManualUrl,
   watchUrl,
 } from "./tvStreams";
 import HlsPlayer from "./HlsPlayer";
 
 const SLOT_STORAGE_KEY = "sitroom-tv-slots";
+const SLOT_URL_KEY = "sitroom-tv-slot-urls";
 
 type FsElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
@@ -51,12 +54,28 @@ function loadSlotStreams(): string[] {
     if (!Array.isArray(parsed)) return defaults;
     return defaults.map((fallback, i) => {
       const id = parsed[i];
+      if (id === CUSTOM_STREAM_ID) return CUSTOM_STREAM_ID;
       return typeof id === "string" && TV_STREAM_CATALOG.some((o) => o.id === id)
         ? id
         : fallback;
     });
   } catch {
     return defaults;
+  }
+}
+
+function loadSlotUrls(): string[] {
+  const empty = Array.from({ length: TV_CATEGORIES.length }, () => "");
+  try {
+    const raw = localStorage.getItem(SLOT_URL_KEY);
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return empty;
+    return empty.map((_, i) =>
+      typeof parsed[i] === "string" ? parsed[i] : "",
+    );
+  } catch {
+    return empty;
   }
 }
 
@@ -77,6 +96,8 @@ export default function TvLiveWall({
   const slotCount = TV_CATEGORIES.length;
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<string[]>(loadSlotStreams);
+  const [customUrls, setCustomUrls] = useState<string[]>(loadSlotUrls);
+  const [urlDraft, setUrlDraft] = useState<string[]>(loadSlotUrls);
   const [playing, setPlaying] = useState<boolean[]>(() =>
     emptyPlayingSlots(slotCount),
   );
@@ -101,6 +122,10 @@ export default function TvLiveWall({
     localStorage.setItem(SLOT_STORAGE_KEY, JSON.stringify(selected));
   }, [selected]);
 
+  useEffect(() => {
+    localStorage.setItem(SLOT_URL_KEY, JSON.stringify(customUrls));
+  }, [customUrls]);
+
   const playVisible = (on = true) => {
     setPlaying((p) => {
       const next = [...p];
@@ -109,7 +134,28 @@ export default function TvLiveWall({
     });
   };
 
-  const optionFor = (slot: number) => optionById(selected[slot]);
+  const optionFor = (slot: number) => {
+    if (selected[slot] === CUSTOM_STREAM_ID) {
+      return parseManualUrl(customUrls[slot]) ?? optionById(CUSTOM_STREAM_ID);
+    }
+    return optionById(selected[slot]);
+  };
+
+  const applyManualUrl = (slot: number, raw = urlDraft[slot]) => {
+    const parsed = parseManualUrl(raw);
+    if (!parsed) return;
+    setCustomUrls((u) => {
+      const next = [...u];
+      next[slot] = raw.trim();
+      return next;
+    });
+    setUrlDraft((u) => {
+      const next = [...u];
+      next[slot] = raw.trim();
+      return next;
+    });
+    setSlotStream(slot, CUSTOM_STREAM_ID, true);
+  };
 
   const tryNextLink = (slot: number) => {
     setSelected((s) => {
@@ -206,12 +252,42 @@ export default function TvLiveWall({
       value={selected[slot]}
       onChange={(e) => setSlotStream(slot, e.target.value, !mini)}
     >
+      <option value={CUSTOM_STREAM_ID}>URL manual</option>
       {TV_STREAM_CATALOG.map((o) => (
         <option key={o.id} value={o.id}>
           {o.label}
         </option>
       ))}
     </select>
+  );
+
+  const urlInput = (slot: number) => (
+    <form
+      className="sr-tv-url-row"
+      onSubmit={(e) => {
+        e.preventDefault();
+        applyManualUrl(slot);
+      }}
+    >
+      <input
+        className="sr-tv-url"
+        type="url"
+        inputMode="url"
+        spellCheck={false}
+        placeholder="Tempel URL live: .m3u8 / YouTube / embed resmi"
+        value={urlDraft[slot] ?? ""}
+        onChange={(e) =>
+          setUrlDraft((u) => {
+            const next = [...u];
+            next[slot] = e.target.value;
+            return next;
+          })
+        }
+      />
+      <button className="btn small" type="submit">
+        Pasang
+      </button>
+    </form>
   );
 
   const renderPlayer = (slot: number, mode: "grid" | "wall" | "single") => {
@@ -286,8 +362,10 @@ export default function TvLiveWall({
         {mode === "grid" && (
           <>
             {streamSelect(slot)}
+            {urlInput(slot)}
             <small className="sr-tv-option-hint">
-              Pilih stasiun bebas · {TV_STREAM_CATALOG.length} opsi · ↻ ganti link
+              Pilih stasiun atau tempel URL · {TV_STREAM_CATALOG.length} opsi · ↻
+              ganti link
             </small>
           </>
         )}
@@ -295,13 +373,13 @@ export default function TvLiveWall({
           {isPlaying ? (
             isHlsOption(opt) && opt.hlsUrl ? (
               <HlsPlayer
-                key={`${mode}-${slot}-${opt.id}`}
+                key={`${mode}-${slot}-${opt.id}-${opt.hlsUrl}`}
                 src={opt.hlsUrl}
                 title={opt.label}
               />
             ) : (
               <iframe
-                key={`${mode}-${slot}-${opt.id}`}
+                key={`${mode}-${slot}-${opt.id}-${opt.embedSrc ?? opt.videoId ?? ""}`}
                 src={embedUrl(opt, true)}
                 title={opt.label}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -486,13 +564,13 @@ export default function TvLiveWall({
             <div className="sr-tv-enlarged-frame">
               {isHlsOption(enlargedOpt) && enlargedOpt.hlsUrl ? (
                 <HlsPlayer
-                  key={`enlarged-${enlarged}-${enlargedOpt.id}`}
+                  key={`enlarged-${enlarged}-${enlargedOpt.id}-${enlargedOpt.hlsUrl}`}
                   src={enlargedOpt.hlsUrl}
                   title={enlargedOpt.label}
                 />
               ) : (
                 <iframe
-                  key={`enlarged-${enlarged}-${enlargedOpt.id}`}
+                  key={`enlarged-${enlarged}-${enlargedOpt.id}-${enlargedOpt.embedSrc ?? enlargedOpt.videoId ?? ""}`}
                   src={embedUrl(enlargedOpt, true)}
                   title={enlargedOpt.label}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

@@ -21,6 +21,27 @@ function isAllowedHost(hostname: string): boolean {
   return ALLOWED_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
+function isBlockedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".local") || host === "127.0.0.1") {
+    return true;
+  }
+  return false;
+}
+
+function isAllowedUrl(target: URL): boolean {
+  if (target.protocol !== "https:" && target.protocol !== "http:") return false;
+  if (isBlockedHost(target.hostname)) return false;
+  const path = `${target.pathname}${target.search}`.toLowerCase();
+  return (
+    isAllowedHost(target.hostname) ||
+    path.includes(".m3u8") ||
+    path.endsWith(".ts") ||
+    path.includes("/hls") ||
+    path.includes("/live")
+  );
+}
+
 async function resolveInewsMaster(): Promise<string> {
   const now = Date.now();
   if (inewsMasterUrl && now - inewsMasterAt < 10 * 60 * 1000) {
@@ -49,7 +70,7 @@ function refererFor(hostname: string): string {
   }
   if (hostname.includes("medcom")) return "https://www.metrotvnews.com/live";
   if (hostname.includes("tvri")) return "https://www.tvrinews.com/live";
-  return "https://www.beritasatu.com/btv-live-streaming";
+  return `https://${hostname}/`;
 }
 
 function hlsDevProxy(): Plugin {
@@ -68,7 +89,7 @@ function hlsDevProxy(): Plugin {
               return;
             }
             let target = new URL(raw);
-            if (!isAllowedHost(target.hostname)) {
+            if (!isAllowedUrl(target)) {
               res.statusCode = 403;
               res.end("forbidden");
               return;
@@ -93,7 +114,7 @@ function hlsDevProxy(): Plugin {
             let playlistBase = target;
             try {
               const finalUrl = new URL(upstream.url);
-              if (isAllowedHost(finalUrl.hostname)) playlistBase = finalUrl;
+              if (!isBlockedHost(finalUrl.hostname)) playlistBase = finalUrl;
             } catch {
               /* keep original target */
             }

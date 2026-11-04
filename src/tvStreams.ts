@@ -526,10 +526,82 @@ export const TV_CATEGORIES: TvCategory[] = [
   },
 ];
 
+export const CUSTOM_STREAM_ID = "custom";
+
 export function optionById(id: string): TvStreamOption {
+  if (id === CUSTOM_STREAM_ID) {
+    return { id: CUSTOM_STREAM_ID, label: "URL manual" };
+  }
   return (
     TV_STREAM_CATALOG.find((o) => o.id === id) ?? TV_STREAM_CATALOG[0]
   );
+}
+
+/** Tempel YouTube, .m3u8, atau URL embed/player resmi. */
+export function parseManualUrl(raw: string): TvStreamOption | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    try {
+      url = new URL(`https://${trimmed}`);
+    } catch {
+      return null;
+    }
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+  const youtube =
+    host === "youtube.com" ||
+    host === "m.youtube.com" ||
+    host === "youtu.be" ||
+    host === "youtube-nocookie.com";
+  if (youtube) {
+    const live = url.pathname.match(/^\/live\/([\w-]{6,})/);
+    const embed = url.pathname.match(/^\/embed\/([\w-]{6,})/);
+    const short = host === "youtu.be" ? url.pathname.replace(/^\//, "").split("/")[0] : "";
+    const videoId =
+      url.searchParams.get("v") || live?.[1] || embed?.[1] || short || "";
+    if (videoId) {
+      return {
+        id: CUSTOM_STREAM_ID,
+        label: `YouTube · ${videoId}`,
+        videoId,
+        pageUrl: url.toString(),
+      };
+    }
+    const channelId =
+      url.searchParams.get("channel") ||
+      url.pathname.match(/^\/channel\/(UC[\w-]+)/)?.[1];
+    if (channelId) {
+      return {
+        id: CUSTOM_STREAM_ID,
+        label: "YouTube channel live",
+        channelId,
+        pageUrl: url.toString(),
+      };
+    }
+  }
+
+  const path = `${url.pathname}${url.search}`.toLowerCase();
+  if (path.includes(".m3u8")) {
+    return {
+      id: CUSTOM_STREAM_ID,
+      label: `HLS · ${url.hostname}`,
+      hlsUrl: url.toString(),
+      pageUrl: url.toString(),
+    };
+  }
+
+  return {
+    id: CUSTOM_STREAM_ID,
+    label: `Embed · ${url.hostname}`,
+    embedSrc: url.toString(),
+    pageUrl: url.toString(),
+  };
 }
 
 export function defaultSlotStreamIds(): string[] {
@@ -537,10 +609,11 @@ export function defaultSlotStreamIds(): string[] {
 }
 
 export function nextCatalogOptionId(currentId: string): string {
-  if (!TV_STREAM_CATALOG.length) return currentId;
-  const idx = TV_STREAM_CATALOG.findIndex((o) => o.id === currentId);
-  const next = TV_STREAM_CATALOG[(idx + 1) % TV_STREAM_CATALOG.length];
-  return next?.id ?? TV_STREAM_CATALOG[0].id;
+  const list = TV_STREAM_CATALOG.filter((o) => o.id !== CUSTOM_STREAM_ID);
+  if (!list.length) return currentId;
+  const idx = list.findIndex((o) => o.id === currentId);
+  const next = list[(idx + 1) % list.length];
+  return next?.id ?? list[0].id;
 }
 
 export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
@@ -580,6 +653,7 @@ export function isHlsOption(opt: TvStreamOption): boolean {
 }
 
 export function openSourceLabel(opt: TvStreamOption): string {
+  if (opt.id === CUSTOM_STREAM_ID) return "Buka URL";
   if (opt.pageUrl || opt.hlsUrl || opt.embedSrc) return "Buka situs resmi";
   return "Buka di YouTube";
 }
