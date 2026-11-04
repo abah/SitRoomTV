@@ -39,9 +39,23 @@ export interface TvCategory {
 export const TV_STREAM_CATALOG: TvStreamOption[] = [
   /* —— Metro TV (banyak live paralel) —— */
   {
+    id: "metro-site",
+    label: "Metro TV live (metrotvnews.com)",
+    hlsUrl: "https://edge.medcom.id/live-edge/smil:metro.smil/playlist.m3u8",
+    pageUrl: "https://www.metrotvnews.com/live",
+    channelId: "UCzl0OrB3-ehunyotIQvK77A",
+  },
+  {
+    id: "metro-dailymotion",
+    label: "Metro TV live (Dailymotion)",
+    embedSrc:
+      "https://www.dailymotion.com/embed/video/k236ofBIxajxDiti8CY?autoPlay=1&mute=1&queue-enable=false",
+    pageUrl: "https://www.metrotvnews.com/live",
+  },
+  {
     id: "metro-24jam",
     label: "Metro TV 24 jam",
-    videoId: "AUE5iHINUIw",
+    videoId: "tiIOHgDI3Ow",
     channelId: "UCzl0OrB3-ehunyotIQvK77A",
   },
   {
@@ -402,6 +416,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "MetroTV",
     hint: "Banyak live Metro · coba opsi lain jika mati",
     options: optionsWithDefaults(
+      "metro-site",
+      "metro-dailymotion",
       "metro-channel",
       "metro-24jam",
       "metro-bn-raker",

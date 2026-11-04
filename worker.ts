@@ -4,6 +4,7 @@ const ALLOWED_SUFFIXES = [
   "beritasatumedia.com",
   "rctiplus.id",
   "cnnindonesia.com",
+  "medcom.id",
 ];
 
 const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
@@ -69,6 +70,12 @@ function refererFor(target: URL): string {
     target.hostname.endsWith(".cnnindonesia.com")
   ) {
     return "https://www.cnnindonesia.com/tv/embed?ref=transmedia";
+  }
+  if (
+    target.hostname === "medcom.id" ||
+    target.hostname.endsWith(".medcom.id")
+  ) {
+    return "https://www.metrotvnews.com/live";
   }
   return "https://www.beritasatu.com/btv-live-streaming";
 }
