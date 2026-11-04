@@ -18,6 +18,8 @@ export interface TvStreamOption {
   channelId?: string;
   /** HLS resmi dari situs stasiun (m3u8). */
   hlsUrl?: string;
+  /** Iframe player resmi (bukan YouTube). */
+  embedSrc?: string;
   /** Halaman resmi live. */
   pageUrl?: string;
 }
@@ -37,9 +39,23 @@ export interface TvCategory {
 export const TV_STREAM_CATALOG: TvStreamOption[] = [
   /* —— Metro TV (banyak live paralel) —— */
   {
+    id: "metro-site",
+    label: "Metro TV live (metrotvnews.com)",
+    hlsUrl: "https://edge.medcom.id/live-edge/smil:metro.smil/playlist.m3u8",
+    pageUrl: "https://www.metrotvnews.com/live",
+    channelId: "UCzl0OrB3-ehunyotIQvK77A",
+  },
+  {
+    id: "metro-dailymotion",
+    label: "Metro TV live (Dailymotion)",
+    embedSrc:
+      "https://www.dailymotion.com/embed/video/k236ofBIxajxDiti8CY?autoPlay=1&mute=1&queue-enable=false",
+    pageUrl: "https://www.metrotvnews.com/live",
+  },
+  {
     id: "metro-24jam",
     label: "Metro TV 24 jam",
-    videoId: "AUE5iHINUIw",
+    videoId: "tiIOHgDI3Ow",
     channelId: "UCzl0OrB3-ehunyotIQvK77A",
   },
   {
@@ -106,12 +122,41 @@ export const TV_STREAM_CATALOG: TvStreamOption[] = [
 
   /* —— TVRI —— */
   {
+    id: "tvri-site",
+    label: "TVRI Nasional live (tvri.go.id)",
+    hlsUrl:
+      "https://ott-balancer.tvri.go.id/live/eds/Nasional/hls/Nasional.m3u8",
+    pageUrl: "https://www.tvrinews.com/live",
+    channelId: "UCyIMsCzDRm8_y_6wM26_PWQ",
+  },
+  {
+    id: "tvri-sport",
+    label: "TVRI Sport live",
+    hlsUrl: "https://ott-balancer.tvri.go.id/live/eds/SportHD/hls/SportHD.m3u8",
+    pageUrl: "https://www.tvrinews.com/live",
+  },
+  {
     id: "tvri-channel",
     label: "TVRI Nasional (channel live)",
     channelId: "UCyIMsCzDRm8_y_6wM26_PWQ",
   },
 
   /* —— CNN / CNBC / iNews / Sindo —— */
+  {
+    id: "cnnid-site",
+    label: "CNN Indonesia live (transtv.co.id)",
+    embedSrc:
+      "https://www.cnnindonesia.com/tv/embed?ref=transmedia&smartautoplay=true",
+    pageUrl: "https://www.transtv.co.id/live/cnn",
+    channelId: "UCKII0Ml9S5wneKbHswmUrIQ",
+  },
+  {
+    id: "cnnid-hls",
+    label: "CNN Indonesia live (HLS resmi)",
+    hlsUrl:
+      "https://live.cnnindonesia.com/livecnn/smil:cnntv.smil/playlist.m3u8",
+    pageUrl: "https://www.transtv.co.id/live/cnn",
+  },
   {
     id: "cnnid-24jam",
     label: "CNN Indonesia 24 jam",
@@ -372,6 +417,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "TVRI",
     hint: "Channel live + cadangan nasional",
     options: optionsWithDefaults(
+      "tvri-site",
+      "tvri-sport",
       "tvri-channel",
       "kompas-24jam",
       "metro-24jam",
@@ -385,6 +432,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "MetroTV",
     hint: "Banyak live Metro · coba opsi lain jika mati",
     options: optionsWithDefaults(
+      "metro-site",
+      "metro-dailymotion",
       "metro-channel",
       "metro-24jam",
       "metro-bn-raker",
@@ -403,6 +452,8 @@ export const TV_CATEGORIES: TvCategory[] = [
     title: "CNN Indonesia",
     hint: "CNN + cadangan berita nasional",
     options: optionsWithDefaults(
+      "cnnid-site",
+      "cnnid-hls",
       "cnnid-24jam",
       "cnnid-channel",
       "cnbc-channel",
@@ -475,10 +526,82 @@ export const TV_CATEGORIES: TvCategory[] = [
   },
 ];
 
+export const CUSTOM_STREAM_ID = "custom";
+
 export function optionById(id: string): TvStreamOption {
+  if (id === CUSTOM_STREAM_ID) {
+    return { id: CUSTOM_STREAM_ID, label: "URL manual" };
+  }
   return (
     TV_STREAM_CATALOG.find((o) => o.id === id) ?? TV_STREAM_CATALOG[0]
   );
+}
+
+/** Tempel YouTube, .m3u8, atau URL embed/player resmi. */
+export function parseManualUrl(raw: string): TvStreamOption | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    try {
+      url = new URL(`https://${trimmed}`);
+    } catch {
+      return null;
+    }
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+  const youtube =
+    host === "youtube.com" ||
+    host === "m.youtube.com" ||
+    host === "youtu.be" ||
+    host === "youtube-nocookie.com";
+  if (youtube) {
+    const live = url.pathname.match(/^\/live\/([\w-]{6,})/);
+    const embed = url.pathname.match(/^\/embed\/([\w-]{6,})/);
+    const short = host === "youtu.be" ? url.pathname.replace(/^\//, "").split("/")[0] : "";
+    const videoId =
+      url.searchParams.get("v") || live?.[1] || embed?.[1] || short || "";
+    if (videoId) {
+      return {
+        id: CUSTOM_STREAM_ID,
+        label: `YouTube · ${videoId}`,
+        videoId,
+        pageUrl: url.toString(),
+      };
+    }
+    const channelId =
+      url.searchParams.get("channel") ||
+      url.pathname.match(/^\/channel\/(UC[\w-]+)/)?.[1];
+    if (channelId) {
+      return {
+        id: CUSTOM_STREAM_ID,
+        label: "YouTube channel live",
+        channelId,
+        pageUrl: url.toString(),
+      };
+    }
+  }
+
+  const path = `${url.pathname}${url.search}`.toLowerCase();
+  if (path.includes(".m3u8")) {
+    return {
+      id: CUSTOM_STREAM_ID,
+      label: `HLS · ${url.hostname}`,
+      hlsUrl: url.toString(),
+      pageUrl: url.toString(),
+    };
+  }
+
+  return {
+    id: CUSTOM_STREAM_ID,
+    label: `Embed · ${url.hostname}`,
+    embedSrc: url.toString(),
+    pageUrl: url.toString(),
+  };
 }
 
 export function defaultSlotStreamIds(): string[] {
@@ -486,10 +609,11 @@ export function defaultSlotStreamIds(): string[] {
 }
 
 export function nextCatalogOptionId(currentId: string): string {
-  if (!TV_STREAM_CATALOG.length) return currentId;
-  const idx = TV_STREAM_CATALOG.findIndex((o) => o.id === currentId);
-  const next = TV_STREAM_CATALOG[(idx + 1) % TV_STREAM_CATALOG.length];
-  return next?.id ?? TV_STREAM_CATALOG[0].id;
+  const list = TV_STREAM_CATALOG.filter((o) => o.id !== CUSTOM_STREAM_ID);
+  if (!list.length) return currentId;
+  const idx = list.findIndex((o) => o.id === currentId);
+  const next = list[(idx + 1) % list.length];
+  return next?.id ?? list[0].id;
 }
 
 export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
@@ -498,6 +622,7 @@ export function emptyPlayingSlots(count = TV_CATEGORIES.length): boolean[] {
 
 export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
   if (opt.hlsUrl) return opt.hlsUrl;
+  if (opt.embedSrc) return opt.embedSrc;
   const params = new URLSearchParams({
     autoplay: autoplay ? "1" : "0",
     mute: "1",
@@ -516,6 +641,7 @@ export function embedUrl(opt: TvStreamOption, autoplay: boolean): string {
 
 export function watchUrl(opt: TvStreamOption): string {
   if (opt.pageUrl) return opt.pageUrl;
+  if (opt.embedSrc) return opt.embedSrc;
   if (opt.videoId) return `https://www.youtube.com/watch?v=${opt.videoId}`;
   if (opt.channelId) return `https://www.youtube.com/channel/${opt.channelId}/live`;
   if (opt.hlsUrl) return opt.hlsUrl;
@@ -527,6 +653,7 @@ export function isHlsOption(opt: TvStreamOption): boolean {
 }
 
 export function openSourceLabel(opt: TvStreamOption): string {
-  if (opt.pageUrl || opt.hlsUrl) return "Buka situs resmi";
+  if (opt.id === CUSTOM_STREAM_ID) return "Buka URL";
+  if (opt.pageUrl || opt.hlsUrl || opt.embedSrc) return "Buka situs resmi";
   return "Buka di YouTube";
 }

@@ -3,6 +3,9 @@ const ALLOWED_SUFFIXES = [
   "tenbytecdn.com",
   "beritasatumedia.com",
   "rctiplus.id",
+  "cnnindonesia.com",
+  "medcom.id",
+  "tvri.go.id",
 ];
 
 const INEWS_EMBED = "https://embed.rctiplus.com/live/inews/inewsid";
@@ -48,9 +51,45 @@ function isAllowedHost(hostname: string): boolean {
   return ALLOWED_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
+function isBlockedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host.endsWith(".lan")
+  ) {
+    return true;
+  }
+  if (host === "127.0.0.1" || host === "0.0.0.0" || host === "::1") return true;
+  const ipv4 = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (ipv4) {
+    const [a, b] = ipv4.slice(1, 3).map(Number);
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 169 && b === 254) return true;
+  }
+  return false;
+}
+
+function looksLikeMedia(target: URL): boolean {
+  const path = `${target.pathname}${target.search}`.toLowerCase();
+  return (
+    path.includes(".m3u8") ||
+    path.endsWith(".ts") ||
+    path.endsWith(".m4s") ||
+    path.endsWith(".aac") ||
+    path.includes("/hls") ||
+    path.includes("/live")
+  );
+}
+
 function isAllowed(target: URL): boolean {
   if (target.protocol !== "https:" && target.protocol !== "http:") return false;
-  return isAllowedHost(target.hostname);
+  if (isBlockedHost(target.hostname)) return false;
+  return isAllowedHost(target.hostname) || looksLikeMedia(target);
 }
 
 function refererFor(target: URL): string {
@@ -63,7 +102,29 @@ function refererFor(target: URL): string {
   ) {
     return INEWS_EMBED;
   }
-  return "https://www.beritasatu.com/btv-live-streaming";
+  if (
+    target.hostname === "cnnindonesia.com" ||
+    target.hostname.endsWith(".cnnindonesia.com")
+  ) {
+    return "https://www.cnnindonesia.com/tv/embed?ref=transmedia";
+  }
+  if (
+    target.hostname === "medcom.id" ||
+    target.hostname.endsWith(".medcom.id")
+  ) {
+    return "https://www.metrotvnews.com/live";
+  }
+  if (
+    target.hostname === "tvri.go.id" ||
+    target.hostname.endsWith(".tvri.go.id")
+  ) {
+    return "https://www.tvrinews.com/live";
+  }
+  try {
+    return `${target.origin}/`;
+  } catch {
+    return "https://www.beritasatu.com/btv-live-streaming";
+  }
 }
 
 function originFor(referer: string): string {
@@ -136,7 +197,7 @@ async function proxyHls(request: Request): Promise<Response> {
   let playlistBase = target;
   try {
     const finalUrl = new URL(upstream.url);
-    if (isAllowed(finalUrl)) playlistBase = finalUrl;
+    if (!isBlockedHost(finalUrl.hostname)) playlistBase = finalUrl;
   } catch {
     /* keep original target as rewrite base */
   }
