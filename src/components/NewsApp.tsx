@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { NewsFeedResponse, NewsItem, NewsSourceId } from "@/lib/types";
 import { formatClock, formatRelativeTime } from "@/lib/format";
+import BrandMark from "./BrandMark";
 
 type FilterId = "overall" | NewsSourceId;
 
@@ -48,7 +49,7 @@ function NewsRow({
           <span className="meta-sep" aria-hidden>
             ·
           </span>
-          <span>{item.score} poin</span>
+          <span className="score-pill">{item.score} poin</span>
           {item.clusterSize > 1 ? (
             <>
               <span className="meta-sep" aria-hidden>
@@ -59,7 +60,9 @@ function NewsRow({
           ) : null}
         </div>
         <h3 className="news-row__title">{item.title}</h3>
-        {item.summary ? <p className="news-row__summary">{item.summary}</p> : null}
+        {item.summary && emphasize ? (
+          <p className="news-row__summary">{item.summary}</p>
+        ) : null}
         {item.relatedSources.length > 1 ? (
           <p className="news-row__related">
             Juga di {item.relatedSources.filter((name) => name !== item.sourceName).join(", ")}
@@ -74,9 +77,7 @@ function NewsRow({
           loading="lazy"
           referrerPolicy="no-referrer"
         />
-      ) : (
-        <div className="news-row__image news-row__image--empty" aria-hidden />
-      )}
+      ) : null}
     </a>
   );
 }
@@ -121,8 +122,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
   }, []);
 
   const visibleItems = useMemo(() => {
-    const base =
-      filter === "overall" ? data.trending : data.bySource[filter] ?? [];
+    const base = filter === "overall" ? data.trending : data.bySource[filter] ?? [];
 
     const normalized = query.trim().toLowerCase();
     if (!normalized) return base;
@@ -155,13 +155,16 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       <header className="site-header">
         <div className="site-header__inner">
           <div className="brand">
+            <BrandMark />
             <span className="brand__name">SOROT</span>
             <span className="brand__tag">Berita terpopuler Indonesia</span>
           </div>
           <div className="header-actions">
-            <span>
-              <span className={`status-dot ${isPending ? "is-busy" : ""}`} />{" "}
-              {liveSources}/{data.sources.length} media
+            <span className="live-pill">
+              <span className={`status-dot ${isPending ? "is-busy" : ""}`} />
+              <span>
+                {liveSources}/{data.sources.length} media
+              </span>
             </span>
             <button type="button" className="btn" onClick={() => void refreshNow()}>
               Segarkan
@@ -171,76 +174,81 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       </header>
 
       <section className="masthead">
+        <p className="masthead__eyebrow">Ranking lintas media</p>
         <h1>SOROT</h1>
         <p>
-          Ranking keseluruhan memberi poin dari posisi terpopuler tiap media
-          termasuk Google News (#1 = 15 poin … #15 = 1 poin), lalu dijumlah.
-          Filter per kanal = ranking asli sumber.
+          Satu daftar berbobot dari berita terpopuler media Indonesia dan Google
+          News — diperbarui otomatis.
         </p>
       </section>
 
       <main id="daftar" className="main">
-        <section className="toolbar" aria-label="Filter berita">
-          <div className="toolbar__left">
-            <h2>Terpopuler hari ini</h2>
-            <p>{formatClock(data.updatedAt)} WIB</p>
-          </div>
-          <label className="search">
-            <span className="sr-only">Cari berita</span>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Cari judul atau media"
-              autoComplete="off"
-            />
-          </label>
-        </section>
+        <div className="panel">
+          <section className="toolbar" aria-label="Filter berita">
+            <div className="toolbar__left">
+              <h2>Terpopuler hari ini</h2>
+              <p>Diperbarui {formatClock(data.updatedAt)} WIB</p>
+            </div>
+            <label className="search">
+              <span className="sr-only">Cari berita</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cari judul atau media"
+                autoComplete="off"
+              />
+            </label>
+          </section>
 
-        <div className="filters" role="tablist" aria-label="Sumber media">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === "overall"}
-            className={filter === "overall" ? "chip chip--active" : "chip"}
-            onClick={() => setFilter("overall")}
-          >
-            Keseluruhan
-          </button>
-          {data.sources.map((source) => (
+          <div className="filters" role="tablist" aria-label="Sumber media">
             <button
-              key={source.id}
               type="button"
               role="tab"
-              aria-selected={filter === source.id}
-              className={filter === source.id ? "chip chip--active" : "chip"}
-              onClick={() => setFilter(source.id)}
-              disabled={!source.ok}
-              title={source.ok ? source.name : `${source.name}: tidak tersedia`}
+              aria-selected={filter === "overall"}
+              className={filter === "overall" ? "chip chip--active" : "chip"}
+              onClick={() => setFilter("overall")}
             >
-              {source.shortName}
+              Keseluruhan
             </button>
-          ))}
+            {data.sources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                role="tab"
+                aria-selected={filter === source.id}
+                className={filter === source.id ? "chip chip--active" : "chip"}
+                onClick={() => setFilter(source.id)}
+                disabled={!source.ok}
+                title={source.ok ? source.name : `${source.name}: tidak tersedia`}
+              >
+                {source.shortName}
+              </button>
+            ))}
+          </div>
+
+          {error ? <p className="banner">{error}</p> : null}
+
+          <section className="feed" aria-live="polite">
+            {visibleItems.length === 0 ? (
+              <p className="empty">Tidak ada berita yang cocok dengan filter ini.</p>
+            ) : (
+              visibleItems.map((item, index) => (
+                <NewsRow
+                  key={`${item.id}-${item.link}`}
+                  item={item}
+                  index={index}
+                  emphasize={index === 0 && filter === "overall"}
+                />
+              ))
+            )}
+          </section>
         </div>
-
-        {error ? <p className="banner">{error}</p> : null}
-
-        <section className="feed" aria-live="polite">
-          {visibleItems.length === 0 ? (
-            <p className="empty">Tidak ada berita yang cocok dengan filter ini.</p>
-          ) : (
-            visibleItems.map((item, index) => (
-              <NewsRow
-                key={`${item.id}-${item.link}`}
-                item={item}
-                index={index}
-                emphasize={index === 0 && filter === "overall"}
-              />
-            ))
-          )}
-        </section>
 
         <section className="sources-board" aria-label="Status media">
           <h2>Sumber</h2>
+          <p className="sources-board__hint">
+            Status pengambilan ranking terpopuler dari tiap media.
+          </p>
           <ul>
             {data.sources.map((source) => (
               <li key={source.id}>
@@ -260,8 +268,8 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       <footer className="footer">
         <div className="footer__inner">
           <p>
-            Keseluruhan = jumlah poin Borda dari semua media. Per kanal = ranking
-            terpopuler asli sumber.
+            Keseluruhan menjumlah poin Borda dari semua sumber. Filter per kanal
+            menampilkan ranking asli media tersebut.
           </p>
           <p suppressHydrationWarning>Diperbarui {formatRelativeTime(data.updatedAt, now)}</p>
         </div>

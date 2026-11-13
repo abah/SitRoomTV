@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import NewsApp from "@/components/NewsApp";
+import BrandMark from "@/components/BrandMark";
 import type { NewsFeedResponse } from "@/lib/types";
 
 const EMPTY: NewsFeedResponse = {
   updatedAt: new Date().toISOString(),
+  mode: "terpopuler",
   trending: [],
   bySource: {},
   sources: [],
@@ -34,6 +36,10 @@ export default function App() {
   if (error && !data) {
     return (
       <div className="boot-error">
+        <div className="brand">
+          <BrandMark />
+          <span className="brand__name">SOROT</span>
+        </div>
         <p>{error}</p>
         <button type="button" onClick={() => window.location.reload()}>
           Coba lagi
@@ -46,7 +52,7 @@ export default function App() {
     return (
       <div className="boot-loading">
         <div className="brand">
-          <span className="brand__mark" />
+          <BrandMark />
           <span className="brand__name">SOROT</span>
         </div>
         <p>Mengambil headline dari media Indonesia…</p>
