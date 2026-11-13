@@ -33,34 +33,25 @@ function NewsRow({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`news-row group ${emphasize ? "news-row--hero" : ""}`}
-      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+      className={`news-row ${emphasize ? "news-row--lead" : ""}`}
     >
       <div className="news-row__rank" aria-hidden>
         {String(index + 1).padStart(2, "0")}
       </div>
       <div className="news-row__body">
         <div className="news-row__meta">
-          <span className="source-dot" style={{ background: item.sourceColor }} />
           <span className="source-name">{item.sourceName}</span>
           <span className="meta-sep" aria-hidden>
             ·
           </span>
-          <span>#{item.popularRank} terpopuler</span>
-          {item.publishedAt ? (
+          <span>#{item.popularRank}</span>
+          {item.clusterSize > 1 ? (
             <>
               <span className="meta-sep" aria-hidden>
                 ·
               </span>
-              <time dateTime={item.publishedAt}>
-                {formatRelativeTime(item.publishedAt)}
-              </time>
+              <span className="cluster-pill">{item.clusterSize} media</span>
             </>
-          ) : null}
-          {item.clusterSize > 1 ? (
-            <span className="cluster-pill">
-              {item.clusterSize} media
-            </span>
           ) : null}
         </div>
         <h3 className="news-row__title">{item.title}</h3>
@@ -142,82 +133,48 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
   }, [data, filter, query]);
 
   const liveSources = data.sources.filter((source) => source.ok).length;
-  const topStory = data.trending[0];
+
+  async function refreshNow() {
+    try {
+      const response = await fetch("/api/news", { cache: "no-store" });
+      if (!response.ok) throw new Error("fail");
+      const next = (await response.json()) as NewsFeedResponse;
+      startTransition(() => {
+        setData(next);
+        setError(null);
+      });
+    } catch {
+      setError("Gagal memperbarui. Coba lagi.");
+    }
+  }
 
   return (
     <div className="page">
-      <div className="atmosphere" aria-hidden>
-        <div className="atmosphere__glow atmosphere__glow--a" />
-        <div className="atmosphere__glow atmosphere__glow--b" />
-        <div className="atmosphere__grain" />
-        <div className="atmosphere__grid" />
-      </div>
-
-      <header className="hero">
-        <nav className="topbar">
+      <header className="site-header">
+        <div className="site-header__inner">
           <div className="brand">
-            <span className="brand__mark" aria-hidden />
             <span className="brand__name">SOROT</span>
+            <span className="brand__tag">Berita terpopuler Indonesia</span>
           </div>
-          <div className="topbar__status">
-            <span className={`pulse ${isPending ? "pulse--busy" : ""}`} />
+          <div className="header-actions">
             <span>
-              {liveSources}/{data.sources.length} media aktif
+              <span className={`status-dot ${isPending ? "is-busy" : ""}`} />{" "}
+              {liveSources}/{data.sources.length} media
             </span>
-          </div>
-        </nav>
-
-        <div className="hero__content">
-          <p className="brand-lockup">SOROT</p>
-          <h1 className="hero__title">Terpopuler dari tiap media besar Indonesia.</h1>
-          <p className="hero__lede">
-            Diambil dari halaman/API terpopuler masing-masing kanal—bukan RSS
-            terkini. Peringkat mengikuti ranking resmi di media sumber.
-          </p>
-          <div className="hero__actions">
-            <a href="#daftar" className="btn btn--primary">
-              Lihat sorotan
-            </a>
-            <button
-              type="button"
-              className="btn btn--ghost"
-              onClick={() => {
-                void (async () => {
-                  try {
-                    const response = await fetch("/api/news", { cache: "no-store" });
-                    if (!response.ok) throw new Error("fail");
-                    const next = (await response.json()) as NewsFeedResponse;
-                    startTransition(() => {
-                      setData(next);
-                      setError(null);
-                    });
-                  } catch {
-                    setError("Gagal memperbarui. Coba lagi.");
-                  }
-                })();
-              }}
-            >
+            <button type="button" className="btn" onClick={() => void refreshNow()}>
               Segarkan
             </button>
           </div>
         </div>
-
-        {topStory ? (
-          <div className="hero__visual" aria-hidden>
-            <div className="hero-panel">
-              <div className="hero-panel__label">Paling ramai</div>
-              <div className="hero-panel__score">#{topStory.popularRank}</div>
-              <p className="hero-panel__title">{topStory.title}</p>
-              <p className="hero-panel__meta">
-                {topStory.sourceName}
-                {topStory.clusterSize > 1
-                  ? ` · juga di ${topStory.clusterSize} media`
-                  : " · terpopuler kanal"}
-              </p>
-            </div>
-          </div>
-        ) : null}
       </header>
+
+      <section className="masthead">
+        <h1>SOROT</h1>
+        <p>
+          Peringkat terpopuler dari media besar Indonesia, diambil langsung dari
+          daftar popular masing-masing kanal.
+        </p>
+      </section>
 
       <main id="daftar" className="main">
         <section className="toolbar" aria-label="Filter berita">
@@ -230,7 +187,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Cari judul, media, kata kunci…"
+              placeholder="Cari judul atau media"
               autoComplete="off"
             />
           </label>
@@ -253,7 +210,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
             className={filter === "all" ? "chip chip--active" : "chip"}
             onClick={() => setFilter("all")}
           >
-            Gabungan skor
+            Gabungan
           </button>
           {data.sources.map((source) => (
             <button
@@ -264,9 +221,8 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
               className={filter === source.id ? "chip chip--active" : "chip"}
               onClick={() => setFilter(source.id)}
               disabled={!source.ok}
-              title={source.ok ? source.name : `${source.name}: feed tidak tersedia`}
+              title={source.ok ? source.name : `${source.name}: tidak tersedia`}
             >
-              <span className="chip__dot" style={{ background: source.color }} />
               {source.shortName}
             </button>
           ))}
@@ -290,7 +246,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
         </section>
 
         <section className="sources-board" aria-label="Status media">
-          <h2>Media yang dipantau</h2>
+          <h2>Sumber</h2>
           <ul>
             {data.sources.map((source) => (
               <li key={source.id}>
@@ -308,14 +264,13 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       </main>
 
       <footer className="footer">
-        <p>
-          SOROT mengambil daftar terpopuler resmi tiap media (halaman/API
-          popular). Filter per kanal menampilkan ranking asli sumber. Lintas media
-          menggabungkan topik yang muncul di beberapa daftar terpopuler.
-        </p>
-        <p className="footer__tick" suppressHydrationWarning>
-          Sinkron {formatRelativeTime(data.updatedAt, now)}
-        </p>
+        <div className="footer__inner">
+          <p>
+            Data diambil dari daftar terpopuler resmi tiap media. Filter per kanal
+            menampilkan ranking asli sumber.
+          </p>
+          <p suppressHydrationWarning>Diperbarui {formatRelativeTime(data.updatedAt, now)}</p>
+        </div>
       </footer>
     </div>
   );
