@@ -1,22 +1,25 @@
 # SOROT
 
-Agregator berita populer dari media online terbesar di Indonesia.
+Agregator berita populer Indonesia — Cloudflare Worker di **tren.abah.me**.
 
-## Fitur
+## Stack
 
-- Mengambil RSS publik dari Detik, CNN Indonesia, ANTARA, CNBC Indonesia, Tempo, Tribunnews, Okezone, Republika, Media Indonesia, dan BBC News Indonesia
-- Mengurutkan sorotan berdasarkan liputan lintas media, kebaruan, dan posisi headline
-- Filter per media, pencarian, dan penyegaran otomatis
+- Vite + React (SPA)
+- Worker API `/api/news` (RSS allowlist + ranking lintas media)
+- Domain: `tren.abah.me`
 
-## Menjalankan lokal
+## Lokal
 
 ```bash
 npm install
-npm run dev
+npm run build
+npx wrangler dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000).
+## Deploy
 
-## API
+```bash
+npm run deploy
+```
 
-`GET /api/news` mengembalikan JSON ranking dan daftar per sumber. URL feed dikunci di server (allowlist) agar tidak menerima URL dari pengunjung.
+Butuh `CLOUDFLARE_API_TOKEN` (Workers Edit + Zone DNS Edit) dan akun yang punya zone `abah.me`.

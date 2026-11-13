@@ -22,8 +22,8 @@ async function fetchSource(source: (typeof NEWS_SOURCES)[number]): Promise<{
         "User-Agent": USER_AGENT,
         "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
       },
-      cache: "no-store",
-    });
+      cf: { cacheTtl: 60, cacheEverything: true },
+    } as RequestInit);
 
     if (!response.ok) {
       return { articles: [], error: `HTTP ${response.status}` };

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { NewsFeedResponse, NewsItem, NewsSourceId } from "@/lib/types";
 import { formatClock, formatRelativeTime } from "@/lib/format";
@@ -66,7 +64,6 @@ function NewsRow({
         ) : null}
       </div>
       {item.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.imageUrl}
           alt=""
