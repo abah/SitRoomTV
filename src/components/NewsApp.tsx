@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import type { NewsFeedResponse, NewsItem, NewsSourceId } from "@/lib/types";
 import { formatClock, formatRelativeTime } from "@/lib/format";
 
-type FilterId = "all" | "trending" | NewsSourceId;
+type FilterId = "overall" | NewsSourceId;
 
 const REFRESH_MS = 120_000;
 
@@ -45,6 +45,10 @@ function NewsRow({
             ·
           </span>
           <span>#{item.popularRank}</span>
+          <span className="meta-sep" aria-hidden>
+            ·
+          </span>
+          <span>{item.score} poin</span>
           {item.clusterSize > 1 ? (
             <>
               <span className="meta-sep" aria-hidden>
@@ -79,7 +83,7 @@ function NewsRow({
 
 export default function NewsApp({ initialData }: { initialData: NewsFeedResponse }) {
   const [data, setData] = useState(initialData);
-  const [filter, setFilter] = useState<FilterId>("trending");
+  const [filter, setFilter] = useState<FilterId>("overall");
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -118,9 +122,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
 
   const visibleItems = useMemo(() => {
     const base =
-      filter === "trending" || filter === "all"
-        ? data.trending
-        : data.bySource[filter] ?? [];
+      filter === "overall" ? data.trending : data.bySource[filter] ?? [];
 
     const normalized = query.trim().toLowerCase();
     if (!normalized) return base;
@@ -171,8 +173,9 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       <section className="masthead">
         <h1>SOROT</h1>
         <p>
-          Peringkat terpopuler dari media besar Indonesia, diambil langsung dari
-          daftar popular masing-masing kanal.
+          Ranking keseluruhan memberi poin dari posisi terpopuler tiap media
+          (#1 = 15 poin … #15 = 1 poin), lalu dijumlah. Filter per kanal = ranking
+          asli sumber.
         </p>
       </section>
 
@@ -197,20 +200,11 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
           <button
             type="button"
             role="tab"
-            aria-selected={filter === "trending"}
-            className={filter === "trending" ? "chip chip--active" : "chip"}
-            onClick={() => setFilter("trending")}
+            aria-selected={filter === "overall"}
+            className={filter === "overall" ? "chip chip--active" : "chip"}
+            onClick={() => setFilter("overall")}
           >
-            Lintas media
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === "all"}
-            className={filter === "all" ? "chip chip--active" : "chip"}
-            onClick={() => setFilter("all")}
-          >
-            Gabungan
+            Keseluruhan
           </button>
           {data.sources.map((source) => (
             <button
@@ -239,7 +233,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
                 key={`${item.id}-${item.link}`}
                 item={item}
                 index={index}
-                emphasize={index === 0 && (filter === "trending" || filter === "all")}
+                emphasize={index === 0 && filter === "overall"}
               />
             ))
           )}
@@ -266,8 +260,8 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       <footer className="footer">
         <div className="footer__inner">
           <p>
-            Data diambil dari daftar terpopuler resmi tiap media. Filter per kanal
-            menampilkan ranking asli sumber.
+            Keseluruhan = jumlah poin Borda dari semua media. Per kanal = ranking
+            terpopuler asli sumber.
           </p>
           <p suppressHydrationWarning>Diperbarui {formatRelativeTime(data.updatedAt, now)}</p>
         </div>

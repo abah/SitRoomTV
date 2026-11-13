@@ -28,6 +28,9 @@ const STOPWORDS = new Set([
   "for",
 ]);
 
+/** Points for popular rank #1..N (Borda-style). #1 gets most points. */
+const MAX_LIST_SIZE = 15;
+
 function tokenize(title: string): Set<string> {
   return new Set(
     title
@@ -46,13 +49,10 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
-function popularPositionScore(rank: number): number {
-  if (rank <= 1) return 100;
-  if (rank <= 3) return 90;
-  if (rank <= 5) return 80;
-  if (rank <= 10) return 65;
-  if (rank <= 15) return 50;
-  return 35;
+/** #1 = 15, #2 = 14, ... #15 = 1 */
+export function rankPoints(popularRank: number): number {
+  if (popularRank < 1) return 0;
+  return Math.max(0, MAX_LIST_SIZE - popularRank + 1);
 }
 
 function hashId(input: string): string {
@@ -69,8 +69,12 @@ interface Cluster {
 }
 
 /**
- * Rank by each outlet's own popular list position.
- * Stories that appear on multiple outlets' popular lists rise higher.
+ * Overall national ranking:
+ * 1. Group similar titles across outlets
+ * 2. Sum Borda points from each outlet's popular position
+ * 3. Higher total = more popular overall
+ *
+ * Example: #1 Detik (15) + #3 CNN (13) + #2 Kompas (14) = 42 points
  */
 export function rankPopularArticles(articles: PopularArticle[]): NewsItem[] {
   const clusters: Cluster[] = [];
@@ -103,11 +107,10 @@ export function rankPopularArticles(articles: PopularArticle[]): NewsItem[] {
     const sorted = [...cluster.articles].sort((a, b) => a.popularRank - b.popularRank);
     const primary = sorted[0];
     const uniqueSources = [...new Set(sorted.map((item) => item.sourceName))];
-    const avgPopular =
-      sorted.reduce((sum, item) => sum + popularPositionScore(item.popularRank), 0) /
-      sorted.length;
-    const multiBonus = Math.min(100, (uniqueSources.length - 1) * 22);
-    const score = Math.round(avgPopular * 0.7 + multiBonus * 0.3);
+    const totalPoints = sorted.reduce((sum, item) => sum + rankPoints(item.popularRank), 0);
+    // Normalize to 0-100 for display: max theoretical = MAX_LIST_SIZE * numSources in cluster
+    // Use absolute points as score so multi-outlet stories naturally rank higher
+    const score = totalPoints;
 
     return {
       id: hashId(`${primary.sourceId}:${primary.link}`),
@@ -128,6 +131,7 @@ export function rankPopularArticles(articles: PopularArticle[]): NewsItem[] {
 
   return ranked.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
+    if (b.clusterSize !== a.clusterSize) return b.clusterSize - a.clusterSize;
     return a.popularRank - b.popularRank;
   });
 }
@@ -144,7 +148,7 @@ export function toSourceItems(articles: PopularArticle[]): NewsItem[] {
     sourceName: article.sourceName,
     sourceColor: article.sourceColor,
     popularRank: article.popularRank,
-    score: popularPositionScore(article.popularRank),
+    score: rankPoints(article.popularRank),
     clusterSize: 1,
     relatedSources: [article.sourceName],
   }));
