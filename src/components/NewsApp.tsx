@@ -174,8 +174,8 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
         <h1>SOROT</h1>
         <p>
           Ranking keseluruhan memberi poin dari posisi terpopuler tiap media
-          (#1 = 15 poin … #15 = 1 poin), lalu dijumlah. Filter per kanal = ranking
-          asli sumber.
+          termasuk Google News (#1 = 15 poin … #15 = 1 poin), lalu dijumlah.
+          Filter per kanal = ranking asli sumber.
         </p>
       </section>
 

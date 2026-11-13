@@ -1,6 +1,6 @@
 import type { NewsSourceId } from "./types";
 
-export type PopularSourceKind = "html" | "mostpop-json";
+export type PopularSourceKind = "html" | "mostpop-json" | "rss";
 
 export interface PopularSource {
   id: NewsSourceId;
@@ -9,7 +9,7 @@ export interface PopularSource {
   color: string;
   siteUrl: string;
   kind: PopularSourceKind;
-  /** HTML page or mostpop API path base */
+  /** HTML page, mostpop API path base, or RSS feed URL */
   url: string;
   /** For mostpop-json: kanal id/path segment */
   kanal?: string;
@@ -81,5 +81,15 @@ export const POPULAR_SOURCES: PopularSource[] = [
     siteUrl: "https://www.republika.co.id",
     kind: "html",
     url: "https://news.republika.co.id/hot",
+  },
+  {
+    id: "google",
+    name: "Google News",
+    shortName: "Google",
+    color: "#4285F4",
+    siteUrl: "https://news.google.com/?hl=id&gl=ID&ceid=ID:id",
+    kind: "rss",
+    /** Artikel populer Google Berita (Indonesia) */
+    url: "https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id",
   },
 ];

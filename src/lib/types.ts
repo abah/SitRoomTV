@@ -5,7 +5,8 @@ export type NewsSourceId =
   | "antara"
   | "kompas"
   | "liputan6"
-  | "republika";
+  | "republika"
+  | "google";
 
 export interface NewsItem {
   id: string;

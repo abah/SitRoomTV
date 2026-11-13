@@ -1,3 +1,4 @@
+import { XMLParser } from "fast-xml-parser";
 import type { PopularSource } from "./sources";
 
 export interface PopularArticle {
@@ -15,6 +16,12 @@ export interface PopularArticle {
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+const rssParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+  trimValues: true,
+});
+
 function stripHtml(value: string): string {
   return value
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -28,6 +35,33 @@ function stripHtml(value: string): string {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Google News titles often end with " - Publisher"; strip for clustering. */
+function cleanGoogleTitle(raw: string, publisher?: string): string {
+  let title = stripHtml(raw);
+  if (publisher) {
+    const suffix = ` - ${publisher}`;
+    if (title.endsWith(suffix)) title = title.slice(0, -suffix.length).trim();
+  }
+  title = title.replace(/\s+-\s+[A-Za-z0-9.&' ]{2,40}$/u, "").trim();
+  return title;
+}
+
+function asArray<T>(value: T | T[] | undefined | null): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function parseRssText(node: unknown): string {
+  if (node == null) return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (typeof node === "object") {
+    const record = node as Record<string, unknown>;
+    if (typeof record["#text"] === "string") return record["#text"];
+    if (typeof record["@_url"] === "string") return record["@_url"];
+  }
+  return "";
 }
 
 function absolutize(href: string, siteUrl: string): string {
@@ -201,6 +235,60 @@ function parseHtmlPopular(html: string, source: PopularSource, limit: number): P
   }
 }
 
+function parseGoogleRss(
+  xml: string,
+  source: PopularSource,
+  limit: number,
+): PopularArticle[] {
+  const parsed = rssParser.parse(xml) as {
+    rss?: { channel?: { item?: unknown } };
+  };
+  const items = asArray(parsed.rss?.channel?.item);
+  if (items.length === 0) throw new Error("Feed Google News kosong");
+
+  const list: PopularArticle[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of items) {
+    const item = raw as Record<string, unknown>;
+    const publisher = stripHtml(parseRssText(item.source));
+    const title = cleanGoogleTitle(parseRssText(item.title), publisher || undefined);
+    const link = parseRssText(item.link).trim();
+    if (!title || !link) continue;
+
+    const description = stripHtml(parseRssText(item.description)).slice(0, 220);
+    const pubDate = parseRssText(item.pubDate);
+    let publishedAt: string | null = null;
+    if (pubDate) {
+      const ms = Date.parse(pubDate);
+      if (!Number.isNaN(ms)) publishedAt = new Date(ms).toISOString();
+    }
+
+    const summaryParts = [
+      publisher ? `Sumber: ${publisher}` : "",
+      description,
+    ].filter(Boolean);
+
+    pushUnique(
+      list,
+      seen,
+      {
+        title,
+        link,
+        summary: summaryParts.join(" — ").slice(0, 220),
+        imageUrl: null,
+        publishedAt,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+      },
+      limit,
+    );
+  }
+
+  return list;
+}
+
 function parseMostpopJson(
   payload: unknown,
   source: PopularSource,
@@ -265,6 +353,25 @@ export async function fetchPopularSource(
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const json = await response.json();
       return parseMostpopJson(json, source, limit);
+    }
+
+    if (source.kind === "rss") {
+      const response = await fetch(source.url, {
+        signal: controller.signal,
+        headers: {
+          Accept: "application/rss+xml, application/xml, text/xml, */*",
+          "User-Agent": USER_AGENT,
+          "Accept-Language": "id-ID,id;q=0.9",
+        },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const xml = await response.text();
+      if (source.id === "google") {
+        const articles = parseGoogleRss(xml, source, limit);
+        if (articles.length === 0) throw new Error("Tidak menemukan artikel Google News");
+        return articles;
+      }
+      throw new Error(`Parser RSS belum tersedia untuk ${source.id}`);
     }
 
     const response = await fetch(source.url, {
