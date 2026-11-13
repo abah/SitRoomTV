@@ -1,4 +1,6 @@
+import type { BrowserWorker } from "@cloudflare/puppeteer";
 import { XMLParser } from "fast-xml-parser";
+import { fetchGoogleNewsXml } from "./fetch-google-rss";
 import type { PopularSource } from "./sources";
 
 export interface PopularArticle {
@@ -333,12 +335,17 @@ function parseMostpopJson(
   return list;
 }
 
+export interface FetchPopularOptions {
+  browser?: BrowserWorker;
+}
+
 export async function fetchPopularSource(
   source: PopularSource,
   limit = 15,
+  options: FetchPopularOptions = {},
 ): Promise<PopularArticle[]> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
+  const timer = setTimeout(() => controller.abort(), 30_000);
 
   try {
     if (source.kind === "mostpop-json") {
@@ -356,17 +363,8 @@ export async function fetchPopularSource(
     }
 
     if (source.kind === "rss") {
-      const response = await fetch(source.url, {
-        signal: controller.signal,
-        headers: {
-          Accept: "application/rss+xml, application/xml, text/xml, */*",
-          "User-Agent": USER_AGENT,
-          "Accept-Language": "id-ID,id;q=0.9",
-        },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const xml = await response.text();
       if (source.id === "google") {
+        const xml = await fetchGoogleNewsXml(source.url, options.browser);
         const articles = parseGoogleRss(xml, source, limit);
         if (articles.length === 0) throw new Error("Tidak menemukan artikel Google News");
         return articles;

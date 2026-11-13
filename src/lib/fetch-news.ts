@@ -1,13 +1,18 @@
+import type { BrowserWorker } from "@cloudflare/puppeteer";
 import { POPULAR_SOURCES } from "./sources";
 import { fetchPopularSource, type PopularArticle } from "./parse-popular";
 import { rankPopularArticles, toSourceItems } from "./rank";
 import type { NewsFeedResponse } from "./types";
 
-export async function getNewsFeed(): Promise<NewsFeedResponse> {
+export interface NewsFeedContext {
+  browser?: BrowserWorker;
+}
+
+export async function getNewsFeed(ctx: NewsFeedContext = {}): Promise<NewsFeedResponse> {
   const results = await Promise.all(
     POPULAR_SOURCES.map(async (source) => {
       try {
-        const articles = await fetchPopularSource(source, 15);
+        const articles = await fetchPopularSource(source, 15, { browser: ctx.browser });
         return { source, articles, error: null as string | null };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Gagal mengambil terpopuler";

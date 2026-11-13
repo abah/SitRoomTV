@@ -11,6 +11,7 @@
     "preview": "npm run build && wrangler dev"
   },
   "dependencies": {
+    "@cloudflare/puppeteer": "^1.4.0",
     "fast-xml-parser": "^5.12.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
