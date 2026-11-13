@@ -1,4 +1,4 @@
-import type { ParsedArticle } from "./parse-rss";
+import type { PopularArticle } from "./parse-popular";
 import type { NewsItem } from "./types";
 
 const STOPWORDS = new Set([
@@ -18,31 +18,14 @@ const STOPWORDS = new Set([
   "ada",
   "juga",
   "sudah",
-  "belum",
   "oleh",
   "karena",
   "saat",
-  "setelah",
-  "sebelum",
-  "bisa",
   "tak",
   "tidak",
-  "lebih",
-  "banyak",
-  "jadi",
-  "hingga",
   "the",
-  "a",
-  "an",
-  "of",
-  "to",
-  "in",
-  "on",
+  "and",
   "for",
-  "is",
-  "are",
-  "as",
-  "at",
 ]);
 
 function tokenize(title: string): Set<string> {
@@ -58,32 +41,18 @@ function tokenize(title: string): Set<string> {
 function jaccard(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
   let intersection = 0;
-  for (const token of a) {
-    if (b.has(token)) intersection += 1;
-  }
+  for (const token of a) if (b.has(token)) intersection += 1;
   const union = a.size + b.size - intersection;
   return union === 0 ? 0 : intersection / union;
 }
 
-function recencyScore(publishedAt: string | null): number {
-  if (!publishedAt) return 35;
-  const ageHours = (Date.now() - new Date(publishedAt).getTime()) / 3_600_000;
-  if (ageHours <= 1) return 100;
-  if (ageHours <= 3) return 85;
-  if (ageHours <= 6) return 70;
-  if (ageHours <= 12) return 55;
-  if (ageHours <= 24) return 40;
-  if (ageHours <= 48) return 25;
-  return 10;
-}
-
-function positionScore(feedRank: number): number {
-  if (feedRank <= 1) return 100;
-  if (feedRank <= 3) return 85;
-  if (feedRank <= 5) return 70;
-  if (feedRank <= 10) return 55;
-  if (feedRank <= 15) return 40;
-  return 25;
+function popularPositionScore(rank: number): number {
+  if (rank <= 1) return 100;
+  if (rank <= 3) return 90;
+  if (rank <= 5) return 80;
+  if (rank <= 10) return 65;
+  if (rank <= 15) return 50;
+  return 35;
 }
 
 function hashId(input: string): string {
@@ -95,15 +64,15 @@ function hashId(input: string): string {
 }
 
 interface Cluster {
-  articles: ParsedArticle[];
+  articles: PopularArticle[];
   tokens: Set<string>;
 }
 
 /**
- * Rank stories by cross-outlet coverage, recency, and feed position.
- * Stories covered by multiple media rise as "sedang tren".
+ * Rank by each outlet's own popular list position.
+ * Stories that appear on multiple outlets' popular lists rise higher.
  */
-export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
+export function rankPopularArticles(articles: PopularArticle[]): NewsItem[] {
   const clusters: Cluster[] = [];
 
   for (const article of articles) {
@@ -113,8 +82,7 @@ export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
 
     for (let i = 0; i < clusters.length; i += 1) {
       const cluster = clusters[i];
-      const sameSource = cluster.articles.some((item) => item.sourceId === article.sourceId);
-      if (sameSource) continue;
+      if (cluster.articles.some((item) => item.sourceId === article.sourceId)) continue;
       const score = jaccard(tokens, cluster.tokens);
       if (score > bestScore) {
         bestScore = score;
@@ -122,7 +90,7 @@ export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
       }
     }
 
-    if (bestIndex >= 0 && bestScore >= 0.42) {
+    if (bestIndex >= 0 && bestScore >= 0.4) {
       const cluster = clusters[bestIndex];
       cluster.articles.push(article);
       for (const token of tokens) cluster.tokens.add(token);
@@ -132,21 +100,14 @@ export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
   }
 
   const ranked: NewsItem[] = clusters.map((cluster) => {
-    const sorted = [...cluster.articles].sort((a, b) => {
-      const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      if (bTime !== aTime) return bTime - aTime;
-      return a.feedRank - b.feedRank;
-    });
+    const sorted = [...cluster.articles].sort((a, b) => a.popularRank - b.popularRank);
     const primary = sorted[0];
     const uniqueSources = [...new Set(sorted.map((item) => item.sourceName))];
-    const avgPosition =
-      sorted.reduce((sum, item) => sum + positionScore(item.feedRank), 0) / sorted.length;
-    const avgRecency =
-      sorted.reduce((sum, item) => sum + recencyScore(item.publishedAt), 0) / sorted.length;
-    const coverageScore = Math.min(100, uniqueSources.length * 28);
-
-    const score = Math.round(coverageScore * 0.45 + avgRecency * 0.35 + avgPosition * 0.2);
+    const avgPopular =
+      sorted.reduce((sum, item) => sum + popularPositionScore(item.popularRank), 0) /
+      sorted.length;
+    const multiBonus = Math.min(100, (uniqueSources.length - 1) * 22);
+    const score = Math.round(avgPopular * 0.7 + multiBonus * 0.3);
 
     return {
       id: hashId(`${primary.sourceId}:${primary.link}`),
@@ -158,7 +119,7 @@ export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
       sourceId: primary.sourceId,
       sourceName: primary.sourceName,
       sourceColor: primary.sourceColor,
-      feedRank: primary.feedRank,
+      popularRank: primary.popularRank,
       score,
       clusterSize: uniqueSources.length,
       relatedSources: uniqueSources,
@@ -167,8 +128,24 @@ export function rankArticles(articles: ParsedArticle[]): NewsItem[] {
 
   return ranked.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-    const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-    return bTime - aTime;
+    return a.popularRank - b.popularRank;
   });
+}
+
+export function toSourceItems(articles: PopularArticle[]): NewsItem[] {
+  return articles.map((article) => ({
+    id: hashId(`${article.sourceId}:${article.link}`),
+    title: article.title,
+    link: article.link,
+    summary: article.summary,
+    imageUrl: article.imageUrl,
+    publishedAt: article.publishedAt,
+    sourceId: article.sourceId,
+    sourceName: article.sourceName,
+    sourceColor: article.sourceColor,
+    popularRank: article.popularRank,
+    score: popularPositionScore(article.popularRank),
+    clusterSize: 1,
+    relatedSources: [article.sourceName],
+  }));
 }

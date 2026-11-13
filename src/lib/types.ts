@@ -1,23 +1,11 @@
 export type NewsSourceId =
   | "detik"
   | "cnn"
-  | "antara"
   | "cnbc"
-  | "tempo"
-  | "tribun"
-  | "okezone"
-  | "republika"
-  | "media-indonesia"
-  | "bbc-indonesia";
-
-export interface NewsSource {
-  id: NewsSourceId;
-  name: string;
-  shortName: string;
-  color: string;
-  feedUrl: string;
-  siteUrl: string;
-}
+  | "antara"
+  | "kompas"
+  | "liputan6"
+  | "republika";
 
 export interface NewsItem {
   id: string;
@@ -29,7 +17,8 @@ export interface NewsItem {
   sourceId: NewsSourceId;
   sourceName: string;
   sourceColor: string;
-  feedRank: number;
+  /** Rank on that outlet's popular list (1 = most popular) */
+  popularRank: number;
   score: number;
   clusterSize: number;
   relatedSources: string[];
@@ -37,6 +26,7 @@ export interface NewsItem {
 
 export interface NewsFeedResponse {
   updatedAt: string;
+  mode: "terpopuler";
   trending: NewsItem[];
   bySource: Record<string, NewsItem[]>;
   sources: Array<{

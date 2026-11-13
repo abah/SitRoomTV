@@ -1,89 +1,85 @@
-import type { NewsSource } from "./types";
+import type { NewsSourceId } from "./types";
 
-/** Allowlisted RSS feeds only — never accept visitor-controlled URLs. */
-export const NEWS_SOURCES: NewsSource[] = [
+export type PopularSourceKind = "html" | "mostpop-json";
+
+export interface PopularSource {
+  id: NewsSourceId;
+  name: string;
+  shortName: string;
+  color: string;
+  siteUrl: string;
+  kind: PopularSourceKind;
+  /** HTML page or mostpop API path base */
+  url: string;
+  /** For mostpop-json: kanal id/path segment */
+  kanal?: string;
+}
+
+/** Allowlisted popular endpoints only — never accept visitor-controlled URLs. */
+export const POPULAR_SOURCES: PopularSource[] = [
   {
     id: "detik",
     name: "Detik",
     shortName: "Detik",
     color: "#F15A22",
-    feedUrl: "https://news.detik.com/berita/rss",
     siteUrl: "https://www.detik.com",
+    kind: "html",
+    url: "https://www.detik.com/terpopuler",
   },
   {
     id: "cnn",
     name: "CNN Indonesia",
     shortName: "CNN",
     color: "#CC0000",
-    feedUrl: "https://www.cnnindonesia.com/rss",
     siteUrl: "https://www.cnnindonesia.com",
-  },
-  {
-    id: "antara",
-    name: "ANTARA",
-    shortName: "ANTARA",
-    color: "#0B5CAB",
-    feedUrl: "https://www.antaranews.com/rss/terkini.xml",
-    siteUrl: "https://www.antaranews.com",
+    kind: "mostpop-json",
+    url: "https://www.cnnindonesia.com/api/v2/mostpop",
+    kanal: "all",
   },
   {
     id: "cnbc",
     name: "CNBC Indonesia",
     shortName: "CNBC",
     color: "#005BAC",
-    feedUrl: "https://www.cnbcindonesia.com/news/rss",
     siteUrl: "https://www.cnbcindonesia.com",
+    kind: "mostpop-json",
+    url: "https://www.cnbcindonesia.com/api/v2/mostpop",
+    kanal: "2",
   },
   {
-    id: "tempo",
-    name: "Tempo",
-    shortName: "Tempo",
-    color: "#C41E3A",
-    feedUrl: "https://rss.tempo.co/nasional",
-    siteUrl: "https://www.tempo.co",
+    id: "antara",
+    name: "ANTARA",
+    shortName: "ANTARA",
+    color: "#0B5CAB",
+    siteUrl: "https://www.antaranews.com",
+    kind: "html",
+    url: "https://www.antaranews.com/terpopuler",
   },
   {
-    id: "tribun",
-    name: "Tribunnews",
-    shortName: "Tribun",
+    id: "kompas",
+    name: "Kompas",
+    shortName: "Kompas",
+    color: "#0056A4",
+    siteUrl: "https://www.kompas.com",
+    kind: "html",
+    url: "https://indeks.kompas.com/terpopuler",
+  },
+  {
+    id: "liputan6",
+    name: "Liputan6",
+    shortName: "Liputan6",
     color: "#E31C25",
-    feedUrl: "https://www.tribunnews.com/rss",
-    siteUrl: "https://www.tribunnews.com",
-  },
-  {
-    id: "okezone",
-    name: "Okezone",
-    shortName: "Okezone",
-    color: "#FF6600",
-    feedUrl: "https://sindikasi.okezone.com/index.php/rss/1/RSS2.0",
-    siteUrl: "https://www.okezone.com",
+    siteUrl: "https://www.liputan6.com",
+    kind: "html",
+    url: "https://www.liputan6.com/indeks/terpopuler",
   },
   {
     id: "republika",
     name: "Republika",
     shortName: "Republika",
     color: "#006633",
-    feedUrl: "https://www.republika.co.id/rss/",
     siteUrl: "https://www.republika.co.id",
-  },
-  {
-    id: "media-indonesia",
-    name: "Media Indonesia",
-    shortName: "MI",
-    color: "#1A1A1A",
-    feedUrl: "https://www.mediaindonesia.com/feed",
-    siteUrl: "https://mediaindonesia.com",
-  },
-  {
-    id: "bbc-indonesia",
-    name: "BBC News Indonesia",
-    shortName: "BBC",
-    color: "#BB1919",
-    feedUrl: "https://feeds.bbci.co.uk/indonesia/rss.xml",
-    siteUrl: "https://www.bbc.com/indonesia",
+    kind: "html",
+    url: "https://news.republika.co.id/hot",
   },
 ];
-
-export const SOURCE_BY_ID = Object.fromEntries(
-  NEWS_SOURCES.map((source) => [source.id, source]),
-) as Record<string, NewsSource>;

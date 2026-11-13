@@ -46,9 +46,17 @@ function NewsRow({
           <span className="meta-sep" aria-hidden>
             ·
           </span>
-          <time dateTime={item.publishedAt ?? undefined}>
-            {formatRelativeTime(item.publishedAt)}
-          </time>
+          <span>#{item.popularRank} terpopuler</span>
+          {item.publishedAt ? (
+            <>
+              <span className="meta-sep" aria-hidden>
+                ·
+              </span>
+              <time dateTime={item.publishedAt}>
+                {formatRelativeTime(item.publishedAt)}
+              </time>
+            </>
+          ) : null}
           {item.clusterSize > 1 ? (
             <span className="cluster-pill">
               {item.clusterSize} media
@@ -161,10 +169,10 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
 
         <div className="hero__content">
           <p className="brand-lockup">SOROT</p>
-          <h1 className="hero__title">Berita paling ramai di Indonesia, sekarang.</h1>
+          <h1 className="hero__title">Terpopuler dari tiap media besar Indonesia.</h1>
           <p className="hero__lede">
-            Agregasi headline dari media online terbesar—diurutkan dari liputan
-            lintas outlet, kecepatan, dan posisi di feed.
+            Diambil dari halaman/API terpopuler masing-masing kanal—bukan RSS
+            terkini. Peringkat mengikuti ranking resmi di media sumber.
           </p>
           <div className="hero__actions">
             <a href="#daftar" className="btn btn--primary">
@@ -197,14 +205,14 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
         {topStory ? (
           <div className="hero__visual" aria-hidden>
             <div className="hero-panel">
-              <div className="hero-panel__label">Sedang tren</div>
-              <div className="hero-panel__score">{topStory.score}</div>
+              <div className="hero-panel__label">Paling ramai</div>
+              <div className="hero-panel__score">#{topStory.popularRank}</div>
               <p className="hero-panel__title">{topStory.title}</p>
               <p className="hero-panel__meta">
                 {topStory.sourceName}
                 {topStory.clusterSize > 1
-                  ? ` · ${topStory.clusterSize} media`
-                  : ""}
+                  ? ` · juga di ${topStory.clusterSize} media`
+                  : " · terpopuler kanal"}
               </p>
             </div>
           </div>
@@ -214,7 +222,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       <main id="daftar" className="main">
         <section className="toolbar" aria-label="Filter berita">
           <div className="toolbar__left">
-            <h2>Sorotan hari ini</h2>
+            <h2>Terpopuler hari ini</h2>
             <p>{formatClock(data.updatedAt)} WIB</p>
           </div>
           <label className="search">
@@ -236,7 +244,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
             className={filter === "trending" ? "chip chip--active" : "chip"}
             onClick={() => setFilter("trending")}
           >
-            Tren lintas media
+            Lintas media
           </button>
           <button
             type="button"
@@ -245,7 +253,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
             className={filter === "all" ? "chip chip--active" : "chip"}
             onClick={() => setFilter("all")}
           >
-            Semua ranking
+            Gabungan skor
           </button>
           {data.sources.map((source) => (
             <button
@@ -301,8 +309,9 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
 
       <footer className="footer">
         <p>
-          SOROT membaca RSS publik dari media Indonesia. Skor tren = liputan
-          lintas media + kebaruan + posisi headline. Tautan membuka situs sumber.
+          SOROT mengambil daftar terpopuler resmi tiap media (halaman/API
+          popular). Filter per kanal menampilkan ranking asli sumber. Lintas media
+          menggabungkan topik yang muncul di beberapa daftar terpopuler.
         </p>
         <p className="footer__tick" suppressHydrationWarning>
           Sinkron {formatRelativeTime(data.updatedAt, now)}
