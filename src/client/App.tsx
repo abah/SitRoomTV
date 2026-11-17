@@ -1,37 +1,56 @@
 import { useEffect, useState } from "react";
 import NewsApp from "@/components/NewsApp";
 import BrandMark from "@/components/BrandMark";
+import SiteNav from "@/components/SiteNav";
+import { usePath } from "@/hooks/usePath";
+import { PAGES } from "@/lib/pages";
 import type { NewsFeedResponse } from "@/lib/types";
 
-const EMPTY: NewsFeedResponse = {
-  updatedAt: new Date().toISOString(),
-  mode: "terpopuler",
-  trending: [],
-  bySource: {},
-  sources: [],
-  errors: [],
-};
+const cache = new Map<string, NewsFeedResponse>();
 
 export default function App() {
-  const [data, setData] = useState<NewsFeedResponse | null>(null);
+  const { path, navigate } = usePath();
+  const page = PAGES[path];
+  const [data, setData] = useState<NewsFeedResponse | null>(() => cache.get(page.apiPath) ?? null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(() => !cache.has(page.apiPath));
 
   useEffect(() => {
     let cancelled = false;
+    const cached = cache.get(page.apiPath);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+      setError(null);
+    } else {
+      setLoading(true);
+    }
+
     (async () => {
       try {
-        const response = await fetch("/api/news");
+        const response = await fetch(page.apiPath);
         if (!response.ok) throw new Error("fail");
         const json = (await response.json()) as NewsFeedResponse;
-        if (!cancelled) setData(json);
+        cache.set(page.apiPath, json);
+        if (!cancelled) {
+          setData(json);
+          setError(null);
+          setLoading(false);
+        }
       } catch {
-        if (!cancelled) setError("Gagal memuat berita pertama kali.");
+        if (!cancelled) {
+          if (!cache.has(page.apiPath)) {
+            setError("Gagal memuat berita pertama kali.");
+            setLoading(false);
+          }
+        }
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page.apiPath]);
 
   if (error && !data) {
     return (
@@ -40,6 +59,7 @@ export default function App() {
           <BrandMark />
           <span className="brand__name">SOROT</span>
         </div>
+        <SiteNav active={path} onNavigate={navigate} />
         <p>{error}</p>
         <button type="button" onClick={() => window.location.reload()}>
           Coba lagi
@@ -48,17 +68,22 @@ export default function App() {
     );
   }
 
-  if (!data) {
+  if (loading || !data) {
     return (
       <div className="boot-loading">
         <div className="brand">
           <BrandMark />
           <span className="brand__name">SOROT</span>
         </div>
-        <p>Mengambil headline dari media Indonesia…</p>
+        <SiteNav active={path} onNavigate={navigate} />
+        <p>
+          {page.mode === "keuangan"
+            ? "Mengambil headline keuangan & pasar modal…"
+            : "Mengambil headline dari media Indonesia…"}
+        </p>
       </div>
     );
   }
 
-  return <NewsApp initialData={data ?? EMPTY} />;
+  return <NewsApp page={page} initialData={data} onNavigate={navigate} />;
 }

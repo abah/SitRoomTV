@@ -68,14 +68,21 @@ input {
   min-height: 100vh;
   display: grid;
   place-content: center;
+  justify-items: center;
   gap: 0.85rem;
   text-align: center;
   color: var(--text-2);
+  padding: 1.5rem;
 }
 
 .boot-loading .brand,
 .boot-error .brand {
   justify-content: center;
+}
+
+.boot-loading .site-nav,
+.boot-error .site-nav {
+  margin-top: 0.15rem;
 }
 
 .boot-error button {
@@ -115,10 +122,27 @@ input {
   gap: 1rem;
 }
 
+.brand-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.9rem;
+  min-width: 0;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.brand--button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
 }
 
 .brand__mark {
@@ -143,6 +167,39 @@ input {
   font-weight: 500;
   padding-left: 0.65rem;
   border-left: 1px solid var(--line);
+}
+
+.site-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.site-nav__link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 650;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.site-nav__link:hover {
+  color: var(--text);
+  background: #f3f6fa;
+}
+
+.site-nav__link--active {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .header-actions {
@@ -614,6 +671,16 @@ input {
 @media (max-width: 640px) {
   .brand__tag {
     display: none;
+  }
+
+  .site-header__inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .live-pill span:last-child {

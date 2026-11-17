@@ -1,12 +1,15 @@
 import type { BrowserWorker } from "@cloudflare/puppeteer";
 import puppeteer from "@cloudflare/puppeteer";
 
-const CACHE_URL = "https://sorot.internal/cache/google-news-rss";
 const CACHE_TTL_SECONDS = 600;
 
-async function readCache(): Promise<string | null> {
+function cacheKeyFor(url: string): string {
+  return `https://sorot.internal/cache/google-news-rss?u=${encodeURIComponent(url)}`;
+}
+
+async function readCache(url: string): Promise<string | null> {
   try {
-    const cached = await caches.default.match(CACHE_URL);
+    const cached = await caches.default.match(cacheKeyFor(url));
     if (!cached) return null;
     const text = await cached.text();
     return text.includes("<item>") ? text : null;
@@ -15,10 +18,10 @@ async function readCache(): Promise<string | null> {
   }
 }
 
-async function writeCache(xml: string): Promise<void> {
+async function writeCache(url: string, xml: string): Promise<void> {
   try {
     await caches.default.put(
-      CACHE_URL,
+      cacheKeyFor(url),
       new Response(xml, {
         headers: {
           "Content-Type": "application/rss+xml; charset=utf-8",
@@ -63,7 +66,7 @@ export async function fetchGoogleNewsXml(
   url: string,
   browser?: BrowserWorker,
 ): Promise<string> {
-  const cached = await readCache();
+  const cached = await readCache(url);
   if (cached) return cached;
 
   try {
@@ -78,7 +81,7 @@ export async function fetchGoogleNewsXml(
     if (response.ok) {
       const xml = await response.text();
       if (xml.includes("<item>")) {
-        await writeCache(xml);
+        await writeCache(url, xml);
         return xml;
       }
     }
@@ -91,6 +94,6 @@ export async function fetchGoogleNewsXml(
   }
 
   const xml = await fetchViaBrowser(browser, url);
-  await writeCache(xml);
+  await writeCache(url, xml);
   return xml;
 }

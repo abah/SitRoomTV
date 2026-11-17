@@ -6,7 +6,16 @@ export type NewsSourceId =
   | "kompas"
   | "liputan6"
   | "republika"
-  | "google";
+  | "google"
+  | "cnn-ekonomi"
+  | "detik-finance"
+  | "kontan"
+  | "investor"
+  | "liputan6-bisnis"
+  | "kompas-money"
+  | "google-finance";
+
+export type FeedMode = "terpopuler" | "keuangan";
 
 export interface NewsItem {
   id: string;
@@ -27,7 +36,7 @@ export interface NewsItem {
 
 export interface NewsFeedResponse {
   updatedAt: string;
-  mode: "terpopuler";
+  mode: FeedMode;
   trending: NewsItem[];
   bySource: Record<string, NewsItem[]>;
   sources: Array<{

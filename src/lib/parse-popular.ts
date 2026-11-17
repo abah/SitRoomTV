@@ -220,18 +220,152 @@ function parseRepublika(html: string, source: PopularSource, limit: number): Pop
   return list;
 }
 
+function parseDetikFinance(html: string, source: PopularSource, limit: number): PopularArticle[] {
+  const list: PopularArticle[] = [];
+  const seen = new Set<string>();
+  const re =
+    /href="(https:\/\/finance\.detik\.com\/[^"]+\/d-\d+\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of html.matchAll(re)) {
+    pushUnique(
+      list,
+      seen,
+      {
+        title: stripHtml(match[2]),
+        link: match[1].split("?")[0],
+        summary: "",
+        imageUrl: null,
+        publishedAt: null,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+      },
+      limit,
+    );
+  }
+  return list;
+}
+
+function parseKontan(html: string, source: PopularSource, limit: number): PopularArticle[] {
+  const list: PopularArticle[] = [];
+  const seen = new Set<string>();
+  const blockMatch = html.match(/id="berita-terpopuler"([\s\S]*?)<\/ul>/i);
+  const scope = blockMatch?.[1] ?? html;
+  const re =
+    /href="(https:\/\/[^"]*kontan\.co\.id\/news\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+
+  const candidates: Array<{ title: string; link: string; weight: number }> = [];
+  for (const match of scope.matchAll(re)) {
+    const link = match[1].split("?")[0];
+    const title = stripHtml(match[2]);
+    if (title.length < 18) continue;
+    let weight = 0;
+    if (link.includes("investasi.kontan")) weight += 3;
+    if (link.includes("keuangan.kontan") || link.includes("industri.kontan")) weight += 2;
+    if (link.includes("market.")) weight += 2;
+    candidates.push({ title, link, weight });
+  }
+
+  candidates.sort((a, b) => b.weight - a.weight);
+  for (const item of candidates) {
+    pushUnique(
+      list,
+      seen,
+      {
+        title: item.title,
+        link: item.link,
+        summary: "",
+        imageUrl: null,
+        publishedAt: null,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+      },
+      limit,
+    );
+  }
+  return list;
+}
+
+function parseInvestor(html: string, source: PopularSource, limit: number): PopularArticle[] {
+  const list: PopularArticle[] = [];
+  const seen = new Set<string>();
+  const start = html.toLowerCase().indexOf("terpopuler");
+  const scope = start >= 0 ? html.slice(start, start + 20_000) : html;
+  const re =
+    /href="(https:\/\/investor\.id\/(?:market|business|finance|macroeconomy|bond-and-mutual-fund|national)\/\d+\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of scope.matchAll(re)) {
+    let title = stripHtml(match[2]);
+    title = title.replace(/^\d+\s+/, "").trim();
+    pushUnique(
+      list,
+      seen,
+      {
+        title,
+        link: match[1].split("?")[0],
+        summary: "",
+        imageUrl: null,
+        publishedAt: null,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+      },
+      limit,
+    );
+  }
+  return list;
+}
+
+function parseKompasMoney(html: string, source: PopularSource, limit: number): PopularArticle[] {
+  const list: PopularArticle[] = [];
+  const seen = new Set<string>();
+  const re =
+    /href="(https:\/\/money\.kompas\.com\/read\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of html.matchAll(re)) {
+    let title = stripHtml(match[2]);
+    title = title
+      .replace(/\b(Ekbis|Money|Headline)\b.*$/i, "")
+      .replace(/\d{1,2}\s+\w+\s+\d{4}.*$/i, "")
+      .trim();
+    pushUnique(
+      list,
+      seen,
+      {
+        title,
+        link: match[1].split("?")[0],
+        summary: "",
+        imageUrl: null,
+        publishedAt: null,
+        sourceId: source.id,
+        sourceName: source.name,
+        sourceColor: source.color,
+      },
+      limit,
+    );
+  }
+  return list;
+}
+
 function parseHtmlPopular(html: string, source: PopularSource, limit: number): PopularArticle[] {
   switch (source.id) {
     case "detik":
       return parseDetik(html, source, limit);
+    case "detik-finance":
+      return parseDetikFinance(html, source, limit);
     case "antara":
       return parseAntara(html, source, limit);
     case "kompas":
       return parseKompas(html, source, limit);
+    case "kompas-money":
+      return parseKompasMoney(html, source, limit);
     case "liputan6":
+    case "liputan6-bisnis":
       return parseLiputan6(html, source, limit);
     case "republika":
       return parseRepublika(html, source, limit);
+    case "kontan":
+      return parseKontan(html, source, limit);
+    case "investor":
+      return parseInvestor(html, source, limit);
     default:
       return [];
   }
@@ -363,7 +497,7 @@ export async function fetchPopularSource(
     }
 
     if (source.kind === "rss") {
-      if (source.id === "google") {
+      if (source.id === "google" || source.id === "google-finance") {
         const xml = await fetchGoogleNewsXml(source.url, options.browser);
         const articles = parseGoogleRss(xml, source, limit);
         if (articles.length === 0) throw new Error("Tidak menemukan artikel Google News");

@@ -1,16 +1,20 @@
 import type { BrowserWorker } from "@cloudflare/puppeteer";
-import { POPULAR_SOURCES } from "./sources";
+import { FINANCE_SOURCES, POPULAR_SOURCES, type PopularSource } from "./sources";
 import { fetchPopularSource, type PopularArticle } from "./parse-popular";
 import { rankPopularArticles, toSourceItems } from "./rank";
-import type { NewsFeedResponse } from "./types";
+import type { FeedMode, NewsFeedResponse } from "./types";
 
 export interface NewsFeedContext {
   browser?: BrowserWorker;
 }
 
-export async function getNewsFeed(ctx: NewsFeedContext = {}): Promise<NewsFeedResponse> {
+async function buildFeed(
+  sources: PopularSource[],
+  mode: FeedMode,
+  ctx: NewsFeedContext,
+): Promise<NewsFeedResponse> {
   const results = await Promise.all(
-    POPULAR_SOURCES.map(async (source) => {
+    sources.map(async (source) => {
       try {
         const articles = await fetchPopularSource(source, 15, { browser: ctx.browser });
         return { source, articles, error: null as string | null };
@@ -25,7 +29,7 @@ export async function getNewsFeed(ctx: NewsFeedContext = {}): Promise<NewsFeedRe
   const bySource: NewsFeedResponse["bySource"] = {};
   const errors: NewsFeedResponse["errors"] = [];
 
-  const sources = results.map(({ source, articles, error }) => {
+  const sourceRows = results.map(({ source, articles, error }) => {
     if (error) errors.push({ sourceId: source.id, message: error });
     allArticles.push(...articles);
     bySource[source.id] = toSourceItems(articles);
@@ -42,10 +46,20 @@ export async function getNewsFeed(ctx: NewsFeedContext = {}): Promise<NewsFeedRe
 
   return {
     updatedAt: new Date().toISOString(),
-    mode: "terpopuler",
+    mode,
     trending: rankPopularArticles(allArticles).slice(0, 40),
     bySource,
-    sources,
+    sources: sourceRows,
     errors,
   };
+}
+
+export async function getNewsFeed(ctx: NewsFeedContext = {}): Promise<NewsFeedResponse> {
+  return buildFeed(POPULAR_SOURCES, "terpopuler", ctx);
+}
+
+export async function getFinanceNewsFeed(
+  ctx: NewsFeedContext = {},
+): Promise<NewsFeedResponse> {
+  return buildFeed(FINANCE_SOURCES, "keuangan", ctx);
 }

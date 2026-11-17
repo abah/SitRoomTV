@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { NewsFeedResponse, NewsItem, NewsSourceId } from "@/lib/types";
+import type { AppRoute, PageConfig } from "@/lib/pages";
 import { formatClock, formatRelativeTime } from "@/lib/format";
 import BrandMark from "./BrandMark";
+import SiteNav from "./SiteNav";
 
 type FilterId = "overall" | NewsSourceId;
 
@@ -82,13 +84,29 @@ function NewsRow({
   );
 }
 
-export default function NewsApp({ initialData }: { initialData: NewsFeedResponse }) {
+export default function NewsApp({
+  page,
+  initialData,
+  onNavigate,
+}: {
+  page: PageConfig;
+  initialData: NewsFeedResponse;
+  onNavigate: (to: AppRoute) => void;
+}) {
   const [data, setData] = useState(initialData);
   const [filter, setFilter] = useState<FilterId>("overall");
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    setData(initialData);
+    setFilter("overall");
+    setQuery("");
+    setError(null);
+    document.title = page.documentTitle;
+  }, [initialData, page.documentTitle, page.route]);
 
   useEffect(() => {
     const tick = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -100,7 +118,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
 
     async function refresh() {
       try {
-        const response = await fetch("/api/news", { cache: "no-store" });
+        const response = await fetch(page.apiPath, { cache: "no-store" });
         if (!response.ok) throw new Error("refresh failed");
         const next = (await response.json()) as NewsFeedResponse;
         if (!cancelled) {
@@ -119,7 +137,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       cancelled = true;
       window.clearInterval(id);
     };
-  }, []);
+  }, [page.apiPath]);
 
   const visibleItems = useMemo(() => {
     const base = filter === "overall" ? data.trending : data.bySource[filter] ?? [];
@@ -138,7 +156,7 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
 
   async function refreshNow() {
     try {
-      const response = await fetch("/api/news", { cache: "no-store" });
+      const response = await fetch(page.apiPath, { cache: "no-store" });
       if (!response.ok) throw new Error("fail");
       const next = (await response.json()) as NewsFeedResponse;
       startTransition(() => {
@@ -154,10 +172,18 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
     <div className="page">
       <header className="site-header">
         <div className="site-header__inner">
-          <div className="brand">
-            <BrandMark />
-            <span className="brand__name">SOROT</span>
-            <span className="brand__tag">Berita terpopuler Indonesia</span>
+          <div className="brand-block">
+            <button
+              type="button"
+              className="brand brand--button"
+              onClick={() => onNavigate("/")}
+              aria-label="Ke beranda SOROT"
+            >
+              <BrandMark />
+              <span className="brand__name">SOROT</span>
+            </button>
+            <span className="brand__tag">{page.tagline}</span>
+            <SiteNav active={page.route} onNavigate={onNavigate} />
           </div>
           <div className="header-actions">
             <span className="live-pill">
@@ -174,19 +200,16 @@ export default function NewsApp({ initialData }: { initialData: NewsFeedResponse
       </header>
 
       <section className="masthead">
-        <p className="masthead__eyebrow">Ranking lintas media</p>
+        <p className="masthead__eyebrow">{page.eyebrow}</p>
         <h1>SOROT</h1>
-        <p>
-          Satu daftar berbobot dari berita terpopuler media Indonesia dan Google
-          News — diperbarui otomatis.
-        </p>
+        <p>{page.description}</p>
       </section>
 
       <main id="daftar" className="main">
         <div className="panel">
           <section className="toolbar" aria-label="Filter berita">
             <div className="toolbar__left">
-              <h2>Terpopuler hari ini</h2>
+              <h2>{page.listTitle}</h2>
               <p>Diperbarui {formatClock(data.updatedAt)} WIB</p>
             </div>
             <label className="search">
